@@ -4,6 +4,4 @@ numpy
 scikit-learn
 matplotlib
 xgboost
-tensorflow==2.15.0
 shap
-joblib
