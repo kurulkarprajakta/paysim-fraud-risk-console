@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Optional TF (so app doesn't crash on Streamlit Cloud)
+# Optional TF
 try:
     from tensorflow import keras  # type: ignore
     TF_AVAILABLE = True
@@ -30,49 +30,103 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 1.5rem;
-            padding-bottom: 2rem;
-            max-width: 1250px;
+            padding-top: 0.8rem;
+            padding-bottom: 1.5rem;
+            max-width: 1320px;
         }
-        .main-title {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 0.25rem;
-            color: #1f2937;
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #1d4ed8 100%);
+            color: white;
+            padding: 1.35rem 1.5rem;
+            border-radius: 22px;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
         }
-        .subtitle {
-            font-size: 1.05rem;
-            color: #6b7280;
-            margin-bottom: 1.2rem;
-        }
-        .card {
-            background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
-            border: 1px solid #e5e7eb;
-            padding: 1rem 1.1rem;
-            border-radius: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-            margin-bottom: 0.75rem;
-        }
-        .card h4 {
-            margin: 0 0 0.35rem 0;
-            font-size: 0.95rem;
-            color: #374151;
-        }
-        .card p {
+        .hero h1 {
             margin: 0;
-            color: #111827;
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .hero p {
+            margin: 0.45rem 0 0 0;
+            color: rgba(255,255,255,0.86);
             font-size: 1rem;
+        }
+        .soft-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 1rem 1rem 0.85rem 1rem;
+            box-shadow: 0 2px 12px rgba(15,23,42,0.05);
+        }
+        .small-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 0.9rem 1rem;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+        }
+        .small-label {
+            color: #64748b;
+            font-size: 0.82rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .small-value {
+            color: #0f172a;
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-top: 0.2rem;
+        }
+        .section-title {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 0.2rem;
+        }
+        .section-sub {
+            color: #6b7280;
+            margin-bottom: 0.8rem;
+        }
+        .risk-high {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            display: inline-block;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .risk-low {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            display: inline-block;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .insight {
+            background: #f8fafc;
+            border-left: 4px solid #2563eb;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            color: #334155;
+            margin-bottom: 0.65rem;
         }
         div[data-testid="stMetric"] {
-            background: #f9fafb;
+            background: #ffffff;
             border: 1px solid #e5e7eb;
-            padding: 0.75rem;
-            border-radius: 14px;
+            border-radius: 16px;
+            padding: 0.6rem;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
-        .section-note {
-            color: #6b7280;
-            font-size: 0.95rem;
+        div[data-testid="stTabs"] button {
+            font-weight: 700;
         }
     </style>
     """,
@@ -92,9 +146,7 @@ def file_exists(path: str) -> bool:
 def load_assets():
     preprocess_path = safe_path(MODELS_DIR, "preprocess.pkl")
     if not file_exists(preprocess_path):
-        raise FileNotFoundError(
-            f"Missing {preprocess_path}. Ensure preprocess.pkl exists in /models."
-        )
+        raise FileNotFoundError(f"Missing {preprocess_path}")
     preprocess = joblib.load(preprocess_path)
 
     assets = {
@@ -165,39 +217,32 @@ def predict_proba(model, Xp):
     raise RuntimeError("Model does not support probability prediction.")
 
 def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
-    # Classical sklearn/xgboost models appear saved as full pipelines
     if model_name == "Logistic Regression":
         if assets["lr"] is None:
-            raise FileNotFoundError("lr.pkl not found in /models.")
+            raise FileNotFoundError("lr.pkl not found.")
         return predict_proba(assets["lr"], X_df)
 
     if model_name == "Decision Tree (CV)":
         if assets["tree"] is None:
-            raise FileNotFoundError("tree.pkl not found in /models.")
+            raise FileNotFoundError("tree.pkl not found.")
         return predict_proba(assets["tree"], X_df)
 
     if model_name == "Random Forest (CV)":
         if assets["rf"] is None:
-            raise FileNotFoundError("rf.pkl not found in /models.")
+            raise FileNotFoundError("rf.pkl not found.")
         return predict_proba(assets["rf"], X_df)
 
     if model_name == "XGBoost (CV)":
         if assets["xgb"] is None:
-            raise FileNotFoundError("xgb.pkl not found in /models.")
+            raise FileNotFoundError("xgb.pkl not found.")
         return predict_proba(assets["xgb"], X_df)
 
     if model_name == "MLP (Keras)":
         if (not TF_AVAILABLE) or (assets["mlp"] is None):
-            raise RuntimeError("MLP is not available in this deployment (TensorFlow not installed).")
-
+            raise RuntimeError("MLP is unavailable in this deployment.")
         preprocess = assets["preprocess"]
         Xp = preprocess_row(preprocess, X_df)
-
-        if hasattr(Xp, "toarray"):
-            X_dense = Xp.toarray()
-        else:
-            X_dense = np.array(Xp)
-
+        X_dense = Xp.toarray() if hasattr(Xp, "toarray") else np.array(Xp)
         return float(assets["mlp"].predict(X_dense, verbose=0).ravel()[0])  # type: ignore
 
     raise ValueError(f"Unknown model: {model_name}")
@@ -218,7 +263,7 @@ except Exception as e:
     st.stop()
 
 # -----------------------------
-# Data for performance section
+# Metrics
 # -----------------------------
 metrics = [
     {"Model": "XGBoost (CV)",        "Accuracy": 0.999825, "Precision": 0.991304, "Recall": 0.850746, "F1": 0.915663, "ROC_AUC": 0.997263, "PR_AUC": 0.926423},
@@ -238,111 +283,131 @@ st.sidebar.caption("PaySim-based fraud scoring demo")
 
 threshold = st.sidebar.slider("Fraud decision threshold", 0.05, 0.95, 0.50, 0.01)
 
-st.sidebar.divider()
-
-model_options = [
-    "XGBoost (CV)",
-    "Random Forest (CV)",
-    "Decision Tree (CV)",
-    "Logistic Regression",
-]
+model_options = ["XGBoost (CV)", "Random Forest (CV)", "Decision Tree (CV)", "Logistic Regression"]
 if TF_AVAILABLE and assets.get("mlp") is not None:
     model_options.append("MLP (Keras)")
 
 selected_model = st.sidebar.selectbox("Choose model", model_options, index=0)
 
-if not TF_AVAILABLE:
-    st.sidebar.info("TensorFlow unavailable in this environment, so MLP is hidden automatically.")
+scenario = st.sidebar.selectbox(
+    "Quick scenario",
+    [
+        "Custom",
+        "High-risk transfer",
+        "Medium-risk cash-out",
+        "Low-risk payment",
+    ],
+)
+
+if scenario == "High-risk transfer":
+    default_step = 1
+    default_type = "TRANSFER"
+    default_amount = 100000.0
+    default_old_org = 100000.0
+    default_new_org = 0.0
+    default_old_dest = 0.0
+    default_new_dest = 0.0
+elif scenario == "Medium-risk cash-out":
+    default_step = 20
+    default_type = "CASH_OUT"
+    default_amount = 20000.0
+    default_old_org = 25000.0
+    default_new_org = 3000.0
+    default_old_dest = 5000.0
+    default_new_dest = 25000.0
+elif scenario == "Low-risk payment":
+    default_step = 10
+    default_type = "PAYMENT"
+    default_amount = 120.0
+    default_old_org = 2000.0
+    default_new_org = 1880.0
+    default_old_dest = 0.0
+    default_new_dest = 0.0
+else:
+    default_step = 1
+    default_type = "TRANSFER"
+    default_amount = 100000.0
+    default_old_org = 100000.0
+    default_new_org = 0.0
+    default_old_dest = 0.0
+    default_new_dest = 0.0
+
+st.sidebar.divider()
+st.sidebar.markdown(
+    f"""
+**Active model:** {selected_model}  
+**Threshold:** {threshold:.2f}
+"""
+)
 
 # -----------------------------
 # Header
 # -----------------------------
-st.markdown('<div class="main-title">PaySim Fraud Risk Console</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="subtitle">Interactive fraud scoring, model comparison, and explainability for PaySim transaction data.</div>',
-    unsafe_allow_html=True
+    """
+    <div class="hero">
+        <h1>PaySim Fraud Risk Console</h1>
+        <p>Interactive fraud detection dashboard combining exploratory analysis, model benchmarking, explainability, and live transaction scoring.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-m1, m2, m3 = st.columns(3)
-with m1:
-    st.metric("Best Model", best_row["Model"])
-with m2:
-    st.metric("Best F1 Score", f'{best_row["F1"]:.3f}')
-with m3:
-    st.metric("Best ROC-AUC", f'{best_row["ROC_AUC"]:.3f}')
+k1, k2, k3, k4 = st.columns(4)
+with k1:
+    st.markdown(f'<div class="small-card"><div class="small-label">Best Model</div><div class="small-value">{best_row["Model"]}</div></div>', unsafe_allow_html=True)
+with k2:
+    st.markdown(f'<div class="small-card"><div class="small-label">Best F1</div><div class="small-value">{best_row["F1"]:.3f}</div></div>', unsafe_allow_html=True)
+with k3:
+    st.markdown(f'<div class="small-card"><div class="small-label">ROC-AUC</div><div class="small-value">{best_row["ROC_AUC"]:.3f}</div></div>', unsafe_allow_html=True)
+with k4:
+    st.markdown(f'<div class="small-card"><div class="small-label">PR-AUC</div><div class="small-value">{best_row["PR_AUC"]:.3f}</div></div>', unsafe_allow_html=True)
 
-st.divider()
+st.write("")
 
-# -----------------------------
-# Tabs
-# -----------------------------
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["Executive Summary", "Descriptive Analytics", "Model Performance", "Explainability & Prediction"]
+    ["Executive Summary", "Descriptive Analytics", "Model Performance", "Prediction & Explainability"]
 )
 
 # -----------------------------
-# Tab 1 - Executive Summary
+# Tab 1
 # -----------------------------
 with tab1:
-    left, right = st.columns([1.1, 1])
+    a, b = st.columns([1.15, 1])
 
-    with left:
-        st.markdown(
-            """
-            <div class="card">
-                <h4>Business Problem</h4>
-                <p>Detect high-risk financial transactions before funds leave the system.</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            """
-            <div class="card">
-                <h4>Dataset</h4>
-                <p>PaySim synthetic mobile money transactions with fraud labels.</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            """
-            <div class="card">
-                <h4>Approach</h4>
-                <p>Preprocessing + supervised classification + threshold-based decisioning + SHAP explainability.</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    with a:
+        st.markdown('<div class="section-title">Executive Summary</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Business context, modeling approach, and deployment outcome.</div>', unsafe_allow_html=True)
 
-    with right:
-        st.markdown("### Key takeaway")
+        st.markdown('<div class="insight"><b>Problem:</b> Detect fraudulent mobile money transactions in a highly imbalanced setting where false negatives are costly.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="insight"><b>Dataset:</b> PaySim transaction data with engineered balance-delta features and categorical transaction types.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="insight"><b>Approach:</b> Preprocessing + multiple classifiers + tuned decision thresholds + SHAP for interpretability.</div>', unsafe_allow_html=True)
+
+    with b:
+        st.markdown('<div class="soft-card">', unsafe_allow_html=True)
+        st.markdown("#### Key takeaway")
         st.write(
             f"""
-            Among the evaluated models, **{best_row["Model"]}** performed best on the fraud detection task.
-            The dashboard supports interactive transaction scoring, threshold tuning, side-by-side model review,
-            and explainability artifacts to support decision transparency.
+            **{best_row["Model"]}** emerged as the strongest overall model in this workflow,
+            delivering the best balance of **F1**, **ROC-AUC**, and **PR-AUC** for fraud detection.
+            The deployed console supports live risk scoring, model comparison, and explanation artifacts.
             """
         )
-
-        st.markdown("### Why this matters")
+        st.markdown("#### Why this matters")
         st.write(
             """
-            Fraud detection is a high-imbalance classification problem where overall accuracy can be misleading.
-            For this use case, recall, F1, PR-AUC, and ROC-AUC are more useful for evaluating how effectively
-            the model identifies fraudulent transactions while controlling false positives.
+            Fraud detection should not be judged by accuracy alone. Because fraud is rare, metrics like
+            **Recall**, **F1**, and especially **PR-AUC** provide a more realistic measure of model usefulness.
             """
         )
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------
-# Tab 2 - Descriptive Analytics
+# Tab 2
 # -----------------------------
 with tab2:
-    st.markdown("### Descriptive Analytics")
-    st.markdown(
-        '<div class="section-note">Add your Part 1 visuals here so the app fully reflects the HW workflow.</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="section-title">Descriptive Analytics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Key exploratory findings from the transaction dataset.</div>', unsafe_allow_html=True)
 
     eda1 = safe_path(MODELS_DIR, "eda_class_distribution.png")
     eda2 = safe_path(MODELS_DIR, "eda_transaction_type.png")
@@ -350,160 +415,96 @@ with tab2:
     eda4 = safe_path(MODELS_DIR, "eda_correlation_heatmap.png")
 
     c1, c2 = st.columns(2)
-
     with c1:
         if file_exists(eda1):
-            st.image(eda1, caption="Fraud vs Non-Fraud Distribution", use_container_width=True)
-        else:
-            st.info("Add `models/eda_class_distribution.png` for fraud class distribution.")
-
+            st.image(eda1, caption="Target Distribution: extreme fraud imbalance", use_container_width=True)
         if file_exists(eda3):
-            st.image(eda3, caption="Transaction Amount Distribution", use_container_width=True)
-        else:
-            st.info("Add `models/eda_amount_distribution.png` for amount distribution.")
+            st.image(eda3, caption="Log-scaled amount distribution by fraud label", use_container_width=True)
 
     with c2:
         if file_exists(eda2):
-            st.image(eda2, caption="Transaction Type Analysis", use_container_width=True)
-        else:
-            st.info("Add `models/eda_transaction_type.png` for transaction type analysis.")
-
+            st.image(eda2, caption="Fraud rate is concentrated in TRANSFER and CASH_OUT", use_container_width=True)
         if file_exists(eda4):
-            st.image(eda4, caption="Feature Correlation Heatmap", use_container_width=True)
-        else:
-            st.info("Add `models/eda_correlation_heatmap.png` for correlation heatmap.")
+            st.image(eda4, caption="Correlation structure across numeric features", use_container_width=True)
 
-    st.markdown("### Interpretation")
-    st.write(
+    st.markdown("#### Key EDA insights")
+    st.markdown(
         """
-        Use this section to summarize the most important descriptive findings:
-        which transaction types dominate fraud, how imbalanced the target is,
-        and which variables appear most informative before modeling.
+- Fraud is extremely rare, making the task heavily imbalanced.
+- Fraud concentrates in **TRANSFER** and **CASH_OUT**, while other transaction types contribute very little.
+- Transaction amounts are highly skewed, so log scaling improves interpretability.
+- Engineered balance-delta features appear more informative than raw balances alone.
         """
     )
 
 # -----------------------------
-# Tab 3 - Model Performance
+# Tab 3
 # -----------------------------
 with tab3:
-    st.markdown("### Model Performance Summary")
+    st.markdown('<div class="section-title">Model Performance</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Benchmarking across classifiers, metrics, and diagnostic curves.</div>', unsafe_allow_html=True)
 
-    if not (TF_AVAILABLE and assets.get("mlp") is not None):
-        st.info("MLP metrics are shown from training results, though the deployed app may disable MLP scoring if TensorFlow is unavailable.")
-
-    display_df = df_metrics.copy()
     st.dataframe(
-        display_df.style.highlight_max(subset=["F1", "ROC_AUC", "PR_AUC"], color="#dbeafe"),
-        use_container_width=True
+        df_metrics.style.highlight_max(subset=["F1", "ROC_AUC", "PR_AUC"], color="#dbeafe"),
+        use_container_width=True,
     )
 
-    st.markdown("### Metric Comparison")
-    chart_df = display_df.set_index("Model")[["F1", "ROC_AUC", "PR_AUC"]]
+    st.markdown("#### Metric Comparison")
+    chart_df = df_metrics.set_index("Model")[["F1", "ROC_AUC", "PR_AUC"]]
     st.bar_chart(chart_df)
 
-    st.markdown("### Best Hyperparameters")
-    best_params_path = safe_path(MODELS_DIR, "best_params.json")
-    if file_exists(best_params_path):
-        try:
+    with st.expander("Best Hyperparameters", expanded=False):
+        best_params_path = safe_path(MODELS_DIR, "best_params.json")
+        if file_exists(best_params_path):
             with open(best_params_path, "r", encoding="utf-8") as f:
-                best_params = f.read()
-            st.code(best_params, language="json")
-        except Exception as e:
-            st.warning(f"Could not load best_params.json: {e}")
-    else:
-        st.info("Add `models/best_params.json` if you want tuned hyperparameters displayed here.")
-
-    st.markdown("### ROC / Precision-Recall Curves")
-
-    roc_lr = safe_path(MODELS_DIR, "logistic_regression_roc_curve.png")
-    pr_lr = safe_path(MODELS_DIR, "logistic_regression_pr_curve.png")
-    roc_rf = safe_path(MODELS_DIR, "random_forest_roc_curve.png")
-    pr_rf = safe_path(MODELS_DIR, "random_forest_pr_curve.png")
-    roc_dt = safe_path(MODELS_DIR, "decision_tree_roc_curve.png")
-    pr_dt = safe_path(MODELS_DIR, "decision_tree_pr_curve.png")
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        if file_exists(roc_rf):
-            st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
+                st.code(f.read(), language="json")
         else:
-            st.info("Add models/random_forest_roc_curve.png")
+            st.info("Add models/best_params.json")
 
-        if file_exists(roc_lr):
-            st.image(roc_lr, caption="Logistic Regression ROC Curve", use_container_width=True)
-        else:
-            st.info("Add models/logistic_regression_roc_curve.png")
+    with st.expander("ROC / PR Curve Diagnostics", expanded=False):
+        roc_lr = safe_path(MODELS_DIR, "logistic_regression_roc_curve.png")
+        pr_lr = safe_path(MODELS_DIR, "logistic_regression_pr_curve.png")
+        roc_rf = safe_path(MODELS_DIR, "random_forest_roc_curve.png")
+        pr_rf = safe_path(MODELS_DIR, "random_forest_pr_curve.png")
+        roc_dt = safe_path(MODELS_DIR, "decision_tree_roc_curve.png")
+        pr_dt = safe_path(MODELS_DIR, "decision_tree_pr_curve.png")
 
-        if file_exists(roc_dt):
-            st.image(roc_dt, caption="Decision Tree ROC Curve", use_container_width=True)
-        else:
-            st.info("Add models/decision_tree_roc_curve.png")
-
-    with c2:
-        if file_exists(pr_rf):
-            st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
-        else:
-            st.info("Add models/random_forest_pr_curve.png")
-
-        if file_exists(pr_lr):
-            st.image(pr_lr, caption="Logistic Regression Precision-Recall Curve", use_container_width=True)
-        else:
-            st.info("Add models/logistic_regression_pr_curve.png")
-
-        if file_exists(pr_dt):
-            st.image(pr_dt, caption="Decision Tree Precision-Recall Curve", use_container_width=True)
-        else:
-            st.info("Add models/decision_tree_pr_curve.png")
+        x1, x2 = st.columns(2)
+        with x1:
+            if file_exists(roc_rf):
+                st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
+            if file_exists(roc_lr):
+                st.image(roc_lr, caption="Logistic Regression ROC Curve", use_container_width=True)
+            if file_exists(roc_dt):
+                st.image(roc_dt, caption="Decision Tree ROC Curve", use_container_width=True)
+        with x2:
+            if file_exists(pr_rf):
+                st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
+            if file_exists(pr_lr):
+                st.image(pr_lr, caption="Logistic Regression Precision-Recall Curve", use_container_width=True)
+            if file_exists(pr_dt):
+                st.image(pr_dt, caption="Decision Tree Precision-Recall Curve", use_container_width=True)
 
 # -----------------------------
-# Tab 4 - Explainability & Prediction
+# Tab 4
 # -----------------------------
 with tab4:
-    left, right = st.columns([1.1, 1])
+    left, right = st.columns([1.02, 1])
 
     with left:
-        st.markdown("### Interactive Prediction")
+        st.markdown('<div class="section-title">Interactive Prediction</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Score a transaction and assess risk under the selected model and threshold.</div>', unsafe_allow_html=True)
 
         with st.form("tx_form", clear_on_submit=False):
-            step = st.number_input("Step (time step)", min_value=1, value=1, step=1)
-
-            tx_type = st.selectbox(
-                "Transaction type",
-                ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"]
-            )
-
-            amount = st.number_input("Amount", min_value=0.0, value=100000.0, step=100.0)
-
-            oldbalanceOrg = st.number_input(
-                "Origin old balance (oldbalanceOrg)",
-                min_value=0.0,
-                value=100000.0,
-                step=100.0
-            )
-
-            newbalanceOrig = st.number_input(
-                "Origin new balance (newbalanceOrig)",
-                min_value=0.0,
-                value=0.0,
-                step=100.0
-            )
-
-            oldbalanceDest = st.number_input(
-                "Destination old balance (oldbalanceDest)",
-                min_value=0.0,
-                value=0.0,
-                step=100.0
-            )
-
-            newbalanceDest = st.number_input(
-                "Destination new balance (newbalanceDest)",
-                min_value=0.0,
-                value=0.0,
-                step=100.0
-            )
-
-            submitted = st.form_submit_button("Score transaction")
+            step = st.number_input("Step", min_value=1, value=int(default_step), step=1)
+            tx_type = st.selectbox("Transaction Type", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"],
+                                   index=["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"].index(default_type))
+            amount = st.number_input("Amount", min_value=0.0, value=float(default_amount), step=100.0)
+            oldbalanceOrg = st.number_input("Origin Old Balance", min_value=0.0, value=float(default_old_org), step=100.0)
+            newbalanceOrig = st.number_input("Origin New Balance", min_value=0.0, value=float(default_new_org), step=100.0)
+            oldbalanceDest = st.number_input("Destination Old Balance", min_value=0.0, value=float(default_old_dest), step=100.0)
+            newbalanceDest = st.number_input("Destination New Balance", min_value=0.0, value=float(default_new_dest), step=100.0)
+            submitted = st.form_submit_button("Run Risk Check")
 
         if submitted:
             X_df = make_input_df(
@@ -520,27 +521,45 @@ with tab4:
                 prob = predict_with_selected(selected_model, assets, X_df)
                 decision = risk_label(prob, threshold=threshold)
 
-                r1, r2 = st.columns(2)
-                with r1:
-                    st.metric("Fraud Probability", format_pct(prob))
-                with r2:
-                    st.metric("Decision", decision)
-
-                if decision == "FRAUD":
-                    st.error("🚨 High-risk transaction flagged as FRAUD.")
-                else:
-                    st.success("✅ Transaction classified as LEGIT.")
-
-                with st.expander("Show model input row"):
-                    st.dataframe(X_df, use_container_width=True)
+                st.session_state["last_prob"] = prob
+                st.session_state["last_decision"] = decision
+                st.session_state["last_input"] = X_df
 
             except Exception as e:
                 st.error(f"Scoring failed: {e}")
 
+        if "last_prob" in st.session_state:
+            prob = st.session_state["last_prob"]
+            decision = st.session_state["last_decision"]
+            X_df = st.session_state["last_input"]
+
+            r1, r2 = st.columns(2)
+            with r1:
+                st.metric("Fraud Probability", format_pct(prob))
+            with r2:
+                st.metric("Decision Threshold", f"{threshold:.2f}")
+
+            st.progress(min(max(prob, 0.0), 1.0))
+
+            if decision == "FRAUD":
+                st.markdown('<span class="risk-high">High Risk • FRAUD</span>', unsafe_allow_html=True)
+                st.error("This transaction is flagged as high risk under the current threshold.")
+            else:
+                st.markdown('<span class="risk-low">Low Risk • LEGIT</span>', unsafe_allow_html=True)
+                st.success("This transaction is classified as legitimate under the current threshold.")
+
+            with st.expander("Show model input row", expanded=False):
+                st.dataframe(X_df, use_container_width=True)
+
     with right:
-        st.markdown("### Explainability Artifacts (SHAP)")
-        st.write(f"**Model selected:** {selected_model}")
-        st.write(f"**Decision threshold:** {threshold:.2f}")
+        st.markdown('<div class="section-title">Explainability</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-sub">Global SHAP artifacts for interpreting model behavior.</div>', unsafe_allow_html=True)
+
+        info1, info2 = st.columns(2)
+        with info1:
+            st.markdown(f'<div class="small-card"><div class="small-label">Selected Model</div><div class="small-value">{selected_model}</div></div>', unsafe_allow_html=True)
+        with info2:
+            st.markdown(f'<div class="small-card"><div class="small-label">Threshold</div><div class="small-value">{threshold:.2f}</div></div>', unsafe_allow_html=True)
 
         shap_summary = safe_path(MODELS_DIR, "shap_summary.png")
         shap_bar = safe_path(MODELS_DIR, "shap_bar.png")
@@ -548,16 +567,11 @@ with tab4:
 
         if file_exists(shap_summary):
             st.image(shap_summary, caption="SHAP Summary Plot", use_container_width=True)
-        else:
-            st.warning("Missing models/shap_summary.png")
-
         if file_exists(shap_bar):
-            st.image(shap_bar, caption="SHAP Feature Importance (Bar)", use_container_width=True)
-        else:
-            st.warning("Missing models/shap_bar.png")
+            st.image(shap_bar, caption="SHAP Feature Importance", use_container_width=True)
 
-        if file_exists(shap_waterfall):
-            st.image(shap_waterfall, caption="SHAP Waterfall (Example Prediction)", use_container_width=True)
-        else:
-            st.caption("Optional: add models/shap_waterfall.png for a single-prediction explanation.")
-
+        with st.expander("Single-Prediction Waterfall Example", expanded=False):
+            if file_exists(shap_waterfall):
+                st.image(shap_waterfall, caption="SHAP Waterfall Plot", use_container_width=True)
+            else:
+                st.info("Add models/shap_waterfall.png")
