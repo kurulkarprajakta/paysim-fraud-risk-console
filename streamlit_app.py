@@ -78,18 +78,24 @@ def make_input_df(tx_type: str,
                   oldbalanceOrg: float,
                   newbalanceOrig: float,
                   oldbalanceDest: float,
-                  newbalanceDest: float) -> pd.DataFrame:
+                  newbalanceDest: float,
+                  step: int = 1) -> pd.DataFrame:
     """
-    Create a single-row dataframe matching typical PaySim features.
-    Adjust column names here if your notebook used different names.
+    Create a single-row dataframe matching the training features.
     """
+    orig_balance_delta = float(oldbalanceOrg) - float(newbalanceOrig)
+    dest_balance_delta = float(newbalanceDest) - float(oldbalanceDest)
+
     row = {
+        "step": int(step),
         "type": tx_type,
         "amount": float(amount),
         "oldbalanceOrg": float(oldbalanceOrg),
         "newbalanceOrig": float(newbalanceOrig),
         "oldbalanceDest": float(oldbalanceDest),
         "newbalanceDest": float(newbalanceDest),
+        "orig_balance_delta": float(orig_balance_delta),
+        "dest_balance_delta": float(dest_balance_delta),
     }
     return pd.DataFrame([row])
 
@@ -203,14 +209,15 @@ colA, colB = st.columns([1.2, 1])
 with colA:
     st.subheader("1) Enter transaction details")
     with st.form("tx_form", clear_on_submit=False):
-        tx_type = st.selectbox("Transaction type", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"])
-        amount = st.number_input("Amount", min_value=0.0, value=1000.0, step=100.0)
-        oldbalanceOrg = st.number_input("Origin old balance (oldbalanceOrg)", min_value=0.0, value=5000.0, step=100.0)
-        newbalanceOrig = st.number_input("Origin new balance (newbalanceOrig)", min_value=0.0, value=4000.0, step=100.0)
-        oldbalanceDest = st.number_input("Destination old balance (oldbalanceDest)", min_value=0.0, value=0.0, step=100.0)
-        newbalanceDest = st.number_input("Destination new balance (newbalanceDest)", min_value=0.0, value=0.0, step=100.0)
+    step = st.number_input("Step (time step)", min_value=1, value=1, step=1)
+    tx_type = st.selectbox("Transaction type", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"])
+    amount = st.number_input("Amount", min_value=0.0, value=1000.0, step=100.0)
+    oldbalanceOrg = st.number_input("Origin old balance (oldbalanceOrg)", min_value=0.0, value=5000.0, step=100.0)
+    newbalanceOrig = st.number_input("Origin new balance (newbalanceOrig)", min_value=0.0, value=4000.0, step=100.0)
+    oldbalanceDest = st.number_input("Destination old balance (oldbalanceDest)", min_value=0.0, value=0.0, step=100.0)
+    newbalanceDest = st.number_input("Destination new balance (newbalanceDest)", min_value=0.0, value=0.0, step=100.0)
 
-        submitted = st.form_submit_button("Score transaction")
+    submitted = st.form_submit_button("Score transaction")
 
 with colB:
     st.subheader("2) Score & decision")
@@ -219,13 +226,14 @@ with colB:
 
     if submitted:
         X_df = make_input_df(
-            tx_type=tx_type,
-            amount=amount,
-            oldbalanceOrg=oldbalanceOrg,
-            newbalanceOrig=newbalanceOrig,
-            oldbalanceDest=oldbalanceDest,
-            newbalanceDest=newbalanceDest,
-        )
+    step=step,
+    tx_type=tx_type,
+    amount=amount,
+    oldbalanceOrg=oldbalanceOrg,
+    newbalanceOrig=newbalanceOrig,
+    oldbalanceDest=oldbalanceDest,
+    newbalanceDest=newbalanceDest,
+)
 
         try:
             prob = predict_with_selected(selected_model, assets, X_df)
