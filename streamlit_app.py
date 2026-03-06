@@ -34,27 +34,28 @@ st.markdown(
     """
     <style>
         .block-container {
-            padding-top: 0.8rem;
-            padding-bottom: 1.5rem;
-            max-width: 1380px;
-        }
+    padding-top: 1.1rem;
+    padding-bottom: 1.4rem;
+    max-width: 1380px;
+}
 
-        .hero {
-            background: linear-gradient(135deg, #0f172a 0%, #172554 40%, #1d4ed8 100%);
-            color: white;
-            padding: 1.4rem 1.6rem;
-            border-radius: 24px;
-            margin-bottom: 1rem;
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
-        }
+.hero {
+    background: linear-gradient(135deg, #0f172a 0%, #172554 40%, #1d4ed8 100%);
+    color: white;
+    padding: 1.65rem 1.8rem 1.45rem 1.8rem;
+    border-radius: 24px;
+    margin-bottom: 1rem;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    overflow: visible;
+}
 
-        .hero-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1.1;
-            margin: 0;
-            letter-spacing: -0.03em;
-        }
+.hero-title {
+    font-size: 2.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0;
+    letter-spacing: -0.03em;
+}
 
         .hero-subtitle {
             margin-top: 0.45rem;
@@ -770,3 +771,4 @@ with tab4:
                 st.image(shap_waterfall, caption="SHAP Waterfall Plot", use_container_width=True)
             else:
                 st.info("Missing models/shap_waterfall.png")
+
