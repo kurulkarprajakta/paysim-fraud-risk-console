@@ -1,4 +1,5 @@
 import os
+import json
 import joblib
 import numpy as np
 import pandas as pd
@@ -12,141 +13,190 @@ except Exception:
     keras = None
     TF_AVAILABLE = False
 
-# -----------------------------
-# App config
-# -----------------------------
+
+# ---------------------------------------------------
+# Page config
+# ---------------------------------------------------
 st.set_page_config(
     page_title="PaySim Fraud Risk Console",
     page_icon="🛡️",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 MODELS_DIR = "models"
 
-# -----------------------------
+
+# ---------------------------------------------------
 # Styling
-# -----------------------------
+# ---------------------------------------------------
 st.markdown(
     """
     <style>
         .block-container {
             padding-top: 0.8rem;
             padding-bottom: 1.5rem;
-            max-width: 1320px;
+            max-width: 1380px;
         }
+
         .hero {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #172554 40%, #1d4ed8 100%);
             color: white;
-            padding: 1.35rem 1.5rem;
-            border-radius: 22px;
+            padding: 1.4rem 1.6rem;
+            border-radius: 24px;
             margin-bottom: 1rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
         }
-        .hero h1 {
-            margin: 0;
-            font-size: 2.4rem;
+
+        .hero-title {
+            font-size: 2.5rem;
             font-weight: 800;
-            letter-spacing: -0.02em;
+            line-height: 1.1;
+            margin: 0;
+            letter-spacing: -0.03em;
         }
-        .hero p {
-            margin: 0.45rem 0 0 0;
-            color: rgba(255,255,255,0.86);
+
+        .hero-subtitle {
+            margin-top: 0.45rem;
             font-size: 1rem;
+            color: rgba(255,255,255,0.88);
+            max-width: 980px;
         }
+
+        .metric-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 0.9rem 1rem;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.05);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            color: #0f172a;
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-top: 0.25rem;
+        }
+
+        .section-title {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 0.15rem;
+        }
+
+        .section-subtitle {
+            color: #6b7280;
+            margin-bottom: 0.85rem;
+        }
+
         .soft-card {
-            background: white;
+            background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 18px;
             padding: 1rem 1rem 0.85rem 1rem;
             box-shadow: 0 2px 12px rgba(15,23,42,0.05);
         }
-        .small-card {
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 0.9rem 1rem;
-            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+
+        .insight-box {
+            background: #f8fafc;
+            border-left: 4px solid #2563eb;
+            border-radius: 12px;
+            padding: 0.8rem 0.95rem;
+            color: #334155;
+            margin-bottom: 0.7rem;
         }
-        .small-label {
-            color: #64748b;
-            font-size: 0.82rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-        .small-value {
-            color: #0f172a;
-            font-size: 1.2rem;
-            font-weight: 800;
-            margin-top: 0.2rem;
-        }
-        .section-title {
-            font-size: 1.55rem;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 0.2rem;
-        }
-        .section-sub {
-            color: #6b7280;
-            margin-bottom: 0.8rem;
-        }
+
         .risk-high {
             background: #fef2f2;
             color: #b91c1c;
             border: 1px solid #fecaca;
             border-radius: 999px;
-            padding: 0.35rem 0.75rem;
+            padding: 0.38rem 0.8rem;
             display: inline-block;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 0.9rem;
         }
+
         .risk-low {
             background: #ecfdf5;
             color: #047857;
             border: 1px solid #a7f3d0;
             border-radius: 999px;
-            padding: 0.35rem 0.75rem;
+            padding: 0.38rem 0.8rem;
             display: inline-block;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 0.9rem;
         }
-        .insight {
-            background: #f8fafc;
-            border-left: 4px solid #2563eb;
-            padding: 0.85rem 1rem;
-            border-radius: 12px;
-            color: #334155;
-            margin-bottom: 0.65rem;
+
+        .risk-review {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            border-radius: 999px;
+            padding: 0.38rem 0.8rem;
+            display: inline-block;
+            font-weight: 800;
+            font-size: 0.9rem;
         }
+
         div[data-testid="stMetric"] {
-            background: #ffffff;
+            background: white;
             border: 1px solid #e5e7eb;
             border-radius: 16px;
-            padding: 0.6rem;
+            padding: 0.65rem;
             box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
+
         div[data-testid="stTabs"] button {
             font-weight: 700;
+        }
+
+        .tiny-note {
+            color: #6b7280;
+            font-size: 0.92rem;
+        }
+
+        .recommend-box {
+            background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            padding: 0.9rem 1rem;
+            margin-top: 0.8rem;
+            color: #1e3a8a;
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# -----------------------------
-# Utilities
-# -----------------------------
+
+# ---------------------------------------------------
+# Helpers
+# ---------------------------------------------------
 def safe_path(*parts) -> str:
     return os.path.join(*parts)
 
+
 def file_exists(path: str) -> bool:
     return os.path.exists(path) and os.path.isfile(path)
+
 
 @st.cache_resource
 def load_assets():
     preprocess_path = safe_path(MODELS_DIR, "preprocess.pkl")
     if not file_exists(preprocess_path):
         raise FileNotFoundError(f"Missing {preprocess_path}")
+
     preprocess = joblib.load(preprocess_path)
 
     assets = {
@@ -177,6 +227,7 @@ def load_assets():
 
     return assets
 
+
 def make_input_df(
     tx_type: str,
     amount: float,
@@ -202,8 +253,10 @@ def make_input_df(
     }
     return pd.DataFrame([row])
 
+
 def preprocess_row(preprocess, X_df: pd.DataFrame):
     return preprocess.transform(X_df)
+
 
 def predict_proba(model, Xp):
     if hasattr(model, "predict_proba"):
@@ -211,35 +264,37 @@ def predict_proba(model, Xp):
 
     if hasattr(model, "predict"):
         pred = model.predict(Xp)
-        if np.isscalar(pred[0]) and 0.0 <= float(pred[0]) <= 1.0:
+        if len(pred) > 0 and np.isscalar(pred[0]) and 0.0 <= float(pred[0]) <= 1.0:
             return float(pred[0])
 
     raise RuntimeError("Model does not support probability prediction.")
 
+
 def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
+    # sklearn/xgboost models are saved as full pipelines
     if model_name == "Logistic Regression":
         if assets["lr"] is None:
-            raise FileNotFoundError("lr.pkl not found.")
+            raise FileNotFoundError("lr.pkl not found in /models.")
         return predict_proba(assets["lr"], X_df)
 
     if model_name == "Decision Tree (CV)":
         if assets["tree"] is None:
-            raise FileNotFoundError("tree.pkl not found.")
+            raise FileNotFoundError("tree.pkl not found in /models.")
         return predict_proba(assets["tree"], X_df)
 
     if model_name == "Random Forest (CV)":
         if assets["rf"] is None:
-            raise FileNotFoundError("rf.pkl not found.")
+            raise FileNotFoundError("rf.pkl not found in /models.")
         return predict_proba(assets["rf"], X_df)
 
     if model_name == "XGBoost (CV)":
         if assets["xgb"] is None:
-            raise FileNotFoundError("xgb.pkl not found.")
+            raise FileNotFoundError("xgb.pkl not found in /models.")
         return predict_proba(assets["xgb"], X_df)
 
     if model_name == "MLP (Keras)":
         if (not TF_AVAILABLE) or (assets["mlp"] is None):
-            raise RuntimeError("MLP is unavailable in this deployment.")
+            raise RuntimeError("MLP is not available in this deployment.")
         preprocess = assets["preprocess"]
         Xp = preprocess_row(preprocess, X_df)
         X_dense = Xp.toarray() if hasattr(Xp, "toarray") else np.array(Xp)
@@ -247,24 +302,40 @@ def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
 
     raise ValueError(f"Unknown model: {model_name}")
 
+
 def risk_label(prob: float, threshold: float = 0.5):
     return "FRAUD" if prob >= threshold else "LEGIT"
+
 
 def format_pct(x: float) -> str:
     return f"{x * 100:.2f}%"
 
-# -----------------------------
-# Load models
-# -----------------------------
+
+def recommended_action(prob: float, threshold: float) -> str:
+    if prob >= threshold:
+        return "Escalate for fraud review"
+    if prob >= max(0.30, threshold - 0.15):
+        return "Send to manual review"
+    return "Approve transaction"
+
+
+def risk_badge(prob: float, threshold: float) -> str:
+    if prob >= threshold:
+        return '<span class="risk-high">High Risk • FRAUD</span>'
+    if prob >= max(0.30, threshold - 0.15):
+        return '<span class="risk-review">Moderate Risk • REVIEW</span>'
+    return '<span class="risk-low">Low Risk • LEGIT</span>'
+
+
+# ---------------------------------------------------
+# Assets + data
+# ---------------------------------------------------
 try:
     assets = load_assets()
 except Exception as e:
     st.error(f"Failed to load models/preprocess: {e}")
     st.stop()
 
-# -----------------------------
-# Metrics
-# -----------------------------
 metrics = [
     {"Model": "XGBoost (CV)",        "Accuracy": 0.999825, "Precision": 0.991304, "Recall": 0.850746, "F1": 0.915663, "ROC_AUC": 0.997263, "PR_AUC": 0.926423},
     {"Model": "Random Forest (CV)",  "Accuracy": 0.999687, "Precision": 0.989848, "Recall": 0.727612, "F1": 0.838710, "ROC_AUC": 0.984813, "PR_AUC": 0.916957},
@@ -275,19 +346,25 @@ metrics = [
 df_metrics = pd.DataFrame(metrics)
 best_row = df_metrics.sort_values(["F1", "ROC_AUC"], ascending=False).iloc[0]
 
-# -----------------------------
+
+# ---------------------------------------------------
 # Sidebar
-# -----------------------------
+# ---------------------------------------------------
 st.sidebar.title("🛡️ Fraud Risk Console")
-st.sidebar.caption("PaySim-based fraud scoring demo")
+st.sidebar.caption("Interactive PaySim fraud scoring")
 
 threshold = st.sidebar.slider("Fraud decision threshold", 0.05, 0.95, 0.50, 0.01)
 
-model_options = ["XGBoost (CV)", "Random Forest (CV)", "Decision Tree (CV)", "Logistic Regression"]
+model_options = [
+    "XGBoost (CV)",
+    "Random Forest (CV)",
+    "Decision Tree (CV)",
+    "Logistic Regression",
+]
 if TF_AVAILABLE and assets.get("mlp") is not None:
     model_options.append("MLP (Keras)")
 
-selected_model = st.sidebar.selectbox("Choose model", model_options, index=0)
+selected_model = st.sidebar.selectbox("Scoring model", model_options, index=0)
 
 scenario = st.sidebar.selectbox(
     "Quick scenario",
@@ -308,7 +385,7 @@ if scenario == "High-risk transfer":
     default_old_dest = 0.0
     default_new_dest = 0.0
 elif scenario == "Medium-risk cash-out":
-    default_step = 20
+    default_step = 28
     default_type = "CASH_OUT"
     default_amount = 20000.0
     default_old_org = 25000.0
@@ -336,18 +413,26 @@ st.sidebar.divider()
 st.sidebar.markdown(
     f"""
 **Active model:** {selected_model}  
-**Threshold:** {threshold:.2f}
+**Threshold:** {threshold:.2f}  
+**Scenario:** {scenario}
 """
 )
 
-# -----------------------------
+if not TF_AVAILABLE:
+    st.sidebar.info("TensorFlow may be unavailable here, so MLP could be disabled.")
+
+
+# ---------------------------------------------------
 # Header
-# -----------------------------
+# ---------------------------------------------------
 st.markdown(
     """
     <div class="hero">
-        <h1>PaySim Fraud Risk Console</h1>
-        <p>Interactive fraud detection dashboard combining exploratory analysis, model benchmarking, explainability, and live transaction scoring.</p>
+        <div class="hero-title">PaySim Fraud Risk Console</div>
+        <div class="hero-subtitle">
+            A professional fraud analytics dashboard combining exploratory diagnostics, model benchmarking,
+            explainability, and live transaction scoring for PaySim mobile money data.
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -355,13 +440,25 @@ st.markdown(
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    st.markdown(f'<div class="small-card"><div class="small-label">Best Model</div><div class="small-value">{best_row["Model"]}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="metric-card"><div class="metric-label">Best Model</div><div class="metric-value">{best_row["Model"]}</div></div>',
+        unsafe_allow_html=True
+    )
 with k2:
-    st.markdown(f'<div class="small-card"><div class="small-label">Best F1</div><div class="small-value">{best_row["F1"]:.3f}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="metric-card"><div class="metric-label">Best F1</div><div class="metric-value">{best_row["F1"]:.3f}</div></div>',
+        unsafe_allow_html=True
+    )
 with k3:
-    st.markdown(f'<div class="small-card"><div class="small-label">ROC-AUC</div><div class="small-value">{best_row["ROC_AUC"]:.3f}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="metric-card"><div class="metric-label">ROC-AUC</div><div class="metric-value">{best_row["ROC_AUC"]:.3f}</div></div>',
+        unsafe_allow_html=True
+    )
 with k4:
-    st.markdown(f'<div class="small-card"><div class="small-label">PR-AUC</div><div class="small-value">{best_row["PR_AUC"]:.3f}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="metric-card"><div class="metric-label">PR-AUC</div><div class="metric-value">{best_row["PR_AUC"]:.3f}</div></div>',
+        unsafe_allow_html=True
+    )
 
 st.write("")
 
@@ -369,45 +466,72 @@ tab1, tab2, tab3, tab4 = st.tabs(
     ["Executive Summary", "Descriptive Analytics", "Model Performance", "Prediction & Explainability"]
 )
 
-# -----------------------------
-# Tab 1
-# -----------------------------
+
+# ---------------------------------------------------
+# Tab 1: Executive Summary
+# ---------------------------------------------------
 with tab1:
-    a, b = st.columns([1.15, 1])
+    left, right = st.columns([1.12, 1])
 
-    with a:
+    with left:
         st.markdown('<div class="section-title">Executive Summary</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Business context, modeling approach, and deployment outcome.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-subtitle">Business context, modeling approach, and key findings.</div>',
+            unsafe_allow_html=True
+        )
 
-        st.markdown('<div class="insight"><b>Problem:</b> Detect fraudulent mobile money transactions in a highly imbalanced setting where false negatives are costly.</div>', unsafe_allow_html=True)
-        st.markdown('<div class="insight"><b>Dataset:</b> PaySim transaction data with engineered balance-delta features and categorical transaction types.</div>', unsafe_allow_html=True)
-        st.markdown('<div class="insight"><b>Approach:</b> Preprocessing + multiple classifiers + tuned decision thresholds + SHAP for interpretability.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="insight-box"><b>Problem:</b> Detect fraudulent mobile money transactions in a highly imbalanced classification setting where missing fraud is costly.</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="insight-box"><b>Dataset:</b> PaySim synthetic financial transaction data with transaction type, balances, and engineered balance-delta features.</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="insight-box"><b>Approach:</b> Evaluate multiple models, compare performance across imbalance-aware metrics, and support decisions with SHAP explainability.</div>',
+            unsafe_allow_html=True
+        )
 
-    with b:
+    with right:
         st.markdown('<div class="soft-card">', unsafe_allow_html=True)
-        st.markdown("#### Key takeaway")
+        st.markdown("#### Final Outcome")
         st.write(
             f"""
-            **{best_row["Model"]}** emerged as the strongest overall model in this workflow,
-            delivering the best balance of **F1**, **ROC-AUC**, and **PR-AUC** for fraud detection.
-            The deployed console supports live risk scoring, model comparison, and explanation artifacts.
+            **{best_row["Model"]}** delivered the best overall tradeoff across **F1**, **ROC-AUC**, and **PR-AUC**,
+            making it the strongest candidate for deployment in this workflow.
             """
         )
-        st.markdown("#### Why this matters")
+
+        st.markdown("#### Why these metrics matter")
         st.write(
             """
-            Fraud detection should not be judged by accuracy alone. Because fraud is rare, metrics like
-            **Recall**, **F1**, and especially **PR-AUC** provide a more realistic measure of model usefulness.
+            Fraud detection is dominated by class imbalance, so **accuracy alone is misleading**.
+            This dashboard therefore emphasizes **Recall**, **F1**, and **PR-AUC**, which better reflect how well
+            the model identifies rare fraud events without ignoring false positives.
+            """
+        )
+
+        st.markdown("#### Dashboard Scope")
+        st.write(
+            """
+            This application presents the full workflow required in the homework:
+            descriptive analytics, model performance evaluation, explainability artifacts,
+            and interactive transaction scoring.
             """
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-# -----------------------------
-# Tab 2
-# -----------------------------
+
+# ---------------------------------------------------
+# Tab 2: Descriptive Analytics
+# ---------------------------------------------------
 with tab2:
     st.markdown('<div class="section-title">Descriptive Analytics</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Key exploratory findings from the transaction dataset.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-subtitle">Exploratory findings from the transaction data before model training.</div>',
+        unsafe_allow_html=True
+    )
 
     eda1 = safe_path(MODELS_DIR, "eda_class_distribution.png")
     eda2 = safe_path(MODELS_DIR, "eda_transaction_type.png")
@@ -415,34 +539,52 @@ with tab2:
     eda4 = safe_path(MODELS_DIR, "eda_correlation_heatmap.png")
 
     c1, c2 = st.columns(2)
+
     with c1:
         if file_exists(eda1):
-            st.image(eda1, caption="Target Distribution: extreme fraud imbalance", use_container_width=True)
+            st.image(eda1, caption="Target distribution: fraud is extremely rare", use_container_width=True)
+        else:
+            st.warning("Missing models/eda_class_distribution.png")
+
         if file_exists(eda3):
             st.image(eda3, caption="Log-scaled amount distribution by fraud label", use_container_width=True)
+        else:
+            st.warning("Missing models/eda_amount_distribution.png")
 
     with c2:
         if file_exists(eda2):
-            st.image(eda2, caption="Fraud rate is concentrated in TRANSFER and CASH_OUT", use_container_width=True)
-        if file_exists(eda4):
-            st.image(eda4, caption="Correlation structure across numeric features", use_container_width=True)
+            st.image(eda2, caption="Fraud is concentrated in TRANSFER and CASH_OUT", use_container_width=True)
+        else:
+            st.warning("Missing models/eda_transaction_type.png")
 
-    st.markdown("#### Key EDA insights")
+        if file_exists(eda4):
+            st.image(eda4, caption="Correlation heatmap across numeric features", use_container_width=True)
+        else:
+            st.warning("Missing models/eda_correlation_heatmap.png")
+
+    st.markdown("#### Key Insights")
     st.markdown(
         """
-- Fraud is extremely rare, making the task heavily imbalanced.
-- Fraud concentrates in **TRANSFER** and **CASH_OUT**, while other transaction types contribute very little.
-- Transaction amounts are highly skewed, so log scaling improves interpretability.
-- Engineered balance-delta features appear more informative than raw balances alone.
+- Fraud is a very small minority of transactions, confirming a severe class imbalance problem.
+- Fraud is concentrated in **TRANSFER** and **CASH_OUT**, while other transaction types contribute minimally.
+- Transaction amounts are highly skewed, making log-scale analysis more interpretable.
+- Engineered balance delta features appear more informative than raw balances alone and support downstream classification.
         """
     )
 
-# -----------------------------
-# Tab 3
-# -----------------------------
+
+# ---------------------------------------------------
+# Tab 3: Model Performance
+# ---------------------------------------------------
 with tab3:
     st.markdown('<div class="section-title">Model Performance</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Benchmarking across classifiers, metrics, and diagnostic curves.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-subtitle">Benchmark comparison across classifiers and evaluation diagnostics.</div>',
+        unsafe_allow_html=True
+    )
+
+    if not (TF_AVAILABLE and assets.get("mlp") is not None):
+        st.info("MLP metrics are included from training results, though live MLP scoring may be disabled in this deployment.")
 
     st.dataframe(
         df_metrics.style.highlight_max(subset=["F1", "ROC_AUC", "PR_AUC"], color="#dbeafe"),
@@ -453,15 +595,32 @@ with tab3:
     chart_df = df_metrics.set_index("Model")[["F1", "ROC_AUC", "PR_AUC"]]
     st.bar_chart(chart_df)
 
-    with st.expander("Best Hyperparameters", expanded=False):
-        best_params_path = safe_path(MODELS_DIR, "best_params.json")
-        if file_exists(best_params_path):
-            with open(best_params_path, "r", encoding="utf-8") as f:
-                st.code(f.read(), language="json")
-        else:
-            st.info("Add models/best_params.json")
+    perf_left, perf_right = st.columns([1, 1])
 
-    with st.expander("ROC / PR Curve Diagnostics", expanded=False):
+    with perf_left:
+        with st.expander("Best Hyperparameters", expanded=False):
+            best_params_path = safe_path(MODELS_DIR, "best_params.json")
+            if file_exists(best_params_path):
+                try:
+                    with open(best_params_path, "r", encoding="utf-8") as f:
+                        st.code(f.read(), language="json")
+                except Exception as e:
+                    st.warning(f"Could not load best_params.json: {e}")
+            else:
+                st.info("Missing models/best_params.json")
+
+    with perf_right:
+        with st.expander("Performance Interpretation", expanded=False):
+            st.markdown(
+                """
+- **XGBoost** leads overall due to its best combination of F1, ROC-AUC, and PR-AUC.
+- **Random Forest** performs strongly and serves as a robust ensemble baseline.
+- **Logistic Regression** provides a useful interpretable baseline but suffers from low precision.
+- **Decision Tree** captures fraud aggressively but at the cost of weak precision and lower overall balance.
+                """
+            )
+
+    with st.expander("ROC / Precision-Recall Curve Diagnostics", expanded=False):
         roc_lr = safe_path(MODELS_DIR, "logistic_regression_roc_curve.png")
         pr_lr = safe_path(MODELS_DIR, "logistic_regression_pr_curve.png")
         roc_rf = safe_path(MODELS_DIR, "random_forest_roc_curve.png")
@@ -470,6 +629,7 @@ with tab3:
         pr_dt = safe_path(MODELS_DIR, "decision_tree_pr_curve.png")
 
         x1, x2 = st.columns(2)
+
         with x1:
             if file_exists(roc_rf):
                 st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
@@ -477,6 +637,7 @@ with tab3:
                 st.image(roc_lr, caption="Logistic Regression ROC Curve", use_container_width=True)
             if file_exists(roc_dt):
                 st.image(roc_dt, caption="Decision Tree ROC Curve", use_container_width=True)
+
         with x2:
             if file_exists(pr_rf):
                 st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
@@ -485,25 +646,36 @@ with tab3:
             if file_exists(pr_dt):
                 st.image(pr_dt, caption="Decision Tree Precision-Recall Curve", use_container_width=True)
 
-# -----------------------------
-# Tab 4
-# -----------------------------
+
+# ---------------------------------------------------
+# Tab 4: Prediction & Explainability
+# ---------------------------------------------------
 with tab4:
-    left, right = st.columns([1.02, 1])
+    left, right = st.columns([1.0, 1.02])
 
     with left:
         st.markdown('<div class="section-title">Interactive Prediction</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Score a transaction and assess risk under the selected model and threshold.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-subtitle">Run a live risk check under the selected model and threshold.</div>',
+            unsafe_allow_html=True
+        )
 
         with st.form("tx_form", clear_on_submit=False):
             step = st.number_input("Step", min_value=1, value=int(default_step), step=1)
-            tx_type = st.selectbox("Transaction Type", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"],
-                                   index=["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"].index(default_type))
+
+            tx_type_options = ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"]
+            tx_type = st.selectbox(
+                "Transaction Type",
+                tx_type_options,
+                index=tx_type_options.index(default_type)
+            )
+
             amount = st.number_input("Amount", min_value=0.0, value=float(default_amount), step=100.0)
             oldbalanceOrg = st.number_input("Origin Old Balance", min_value=0.0, value=float(default_old_org), step=100.0)
             newbalanceOrig = st.number_input("Origin New Balance", min_value=0.0, value=float(default_new_org), step=100.0)
             oldbalanceDest = st.number_input("Destination Old Balance", min_value=0.0, value=float(default_old_dest), step=100.0)
             newbalanceDest = st.number_input("Destination New Balance", min_value=0.0, value=float(default_new_dest), step=100.0)
+
             submitted = st.form_submit_button("Run Risk Check")
 
         if submitted:
@@ -516,7 +688,6 @@ with tab4:
                 oldbalanceDest=oldbalanceDest,
                 newbalanceDest=newbalanceDest,
             )
-
             try:
                 prob = predict_with_selected(selected_model, assets, X_df)
                 decision = risk_label(prob, threshold=threshold)
@@ -524,7 +695,6 @@ with tab4:
                 st.session_state["last_prob"] = prob
                 st.session_state["last_decision"] = decision
                 st.session_state["last_input"] = X_df
-
             except Exception as e:
                 st.error(f"Scoring failed: {e}")
 
@@ -533,33 +703,53 @@ with tab4:
             decision = st.session_state["last_decision"]
             X_df = st.session_state["last_input"]
 
-            r1, r2 = st.columns(2)
+            r1, r2, r3 = st.columns(3)
             with r1:
                 st.metric("Fraud Probability", format_pct(prob))
             with r2:
-                st.metric("Decision Threshold", f"{threshold:.2f}")
+                st.metric("Threshold", f"{threshold:.2f}")
+            with r3:
+                st.metric("Model", selected_model)
 
             st.progress(min(max(prob, 0.0), 1.0))
+            st.markdown(risk_badge(prob, threshold), unsafe_allow_html=True)
 
-            if decision == "FRAUD":
-                st.markdown('<span class="risk-high">High Risk • FRAUD</span>', unsafe_allow_html=True)
-                st.error("This transaction is flagged as high risk under the current threshold.")
-            else:
-                st.markdown('<span class="risk-low">Low Risk • LEGIT</span>', unsafe_allow_html=True)
-                st.success("This transaction is classified as legitimate under the current threshold.")
+            action = recommended_action(prob, threshold)
+            st.markdown(
+                f'<div class="recommend-box"><b>Recommended action:</b> {action}</div>',
+                unsafe_allow_html=True
+            )
 
             with st.expander("Show model input row", expanded=False):
                 st.dataframe(X_df, use_container_width=True)
 
+            with st.expander("Scoring Interpretation", expanded=False):
+                st.markdown(
+                    """
+- A score above the threshold is classified as **FRAUD**.
+- Scores close to the threshold can be treated as manual-review candidates.
+- This interface is intended as a decision-support prototype rather than a production control system.
+                    """
+                )
+
     with right:
         st.markdown('<div class="section-title">Explainability</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-sub">Global SHAP artifacts for interpreting model behavior.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-subtitle">Global SHAP artifacts showing which features drive model predictions overall.</div>',
+            unsafe_allow_html=True
+        )
 
-        info1, info2 = st.columns(2)
-        with info1:
-            st.markdown(f'<div class="small-card"><div class="small-label">Selected Model</div><div class="small-value">{selected_model}</div></div>', unsafe_allow_html=True)
-        with info2:
-            st.markdown(f'<div class="small-card"><div class="small-label">Threshold</div><div class="small-value">{threshold:.2f}</div></div>', unsafe_allow_html=True)
+        i1, i2 = st.columns(2)
+        with i1:
+            st.markdown(
+                f'<div class="metric-card"><div class="metric-label">Selected Model</div><div class="metric-value">{selected_model}</div></div>',
+                unsafe_allow_html=True
+            )
+        with i2:
+            st.markdown(
+                f'<div class="metric-card"><div class="metric-label">Decision Threshold</div><div class="metric-value">{threshold:.2f}</div></div>',
+                unsafe_allow_html=True
+            )
 
         shap_summary = safe_path(MODELS_DIR, "shap_summary.png")
         shap_bar = safe_path(MODELS_DIR, "shap_bar.png")
@@ -567,11 +757,16 @@ with tab4:
 
         if file_exists(shap_summary):
             st.image(shap_summary, caption="SHAP Summary Plot", use_container_width=True)
+        else:
+            st.warning("Missing models/shap_summary.png")
+
         if file_exists(shap_bar):
-            st.image(shap_bar, caption="SHAP Feature Importance", use_container_width=True)
+            st.image(shap_bar, caption="SHAP Global Feature Importance", use_container_width=True)
+        else:
+            st.warning("Missing models/shap_bar.png")
 
         with st.expander("Single-Prediction Waterfall Example", expanded=False):
             if file_exists(shap_waterfall):
                 st.image(shap_waterfall, caption="SHAP Waterfall Plot", use_container_width=True)
             else:
-                st.info("Add models/shap_waterfall.png")
+                st.info("Missing models/shap_waterfall.png")
