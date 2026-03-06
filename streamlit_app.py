@@ -209,13 +209,43 @@ colA, colB = st.columns([1.2, 1])
 with colA:
     st.subheader("1) Enter transaction details")
     with st.form("tx_form", clear_on_submit=False):
+
     step = st.number_input("Step (time step)", min_value=1, value=1, step=1)
-    tx_type = st.selectbox("Transaction type", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"])
-    amount = st.number_input("Amount", min_value=0.0, value=1000.0, step=100.0)
-    oldbalanceOrg = st.number_input("Origin old balance (oldbalanceOrg)", min_value=0.0, value=5000.0, step=100.0)
-    newbalanceOrig = st.number_input("Origin new balance (newbalanceOrig)", min_value=0.0, value=4000.0, step=100.0)
-    oldbalanceDest = st.number_input("Destination old balance (oldbalanceDest)", min_value=0.0, value=0.0, step=100.0)
-    newbalanceDest = st.number_input("Destination new balance (newbalanceDest)", min_value=0.0, value=0.0, step=100.0)
+
+    tx_type = st.selectbox(
+        "Transaction type",
+        ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"]
+    )
+
+    amount = st.number_input("Amount", min_value=0.0, value=100000.0, step=100.0)
+
+    oldbalanceOrg = st.number_input(
+        "Origin old balance (oldbalanceOrg)",
+        min_value=0.0,
+        value=100000.0,
+        step=100.0
+    )
+
+    newbalanceOrig = st.number_input(
+        "Origin new balance (newbalanceOrig)",
+        min_value=0.0,
+        value=0.0,
+        step=100.0
+    )
+
+    oldbalanceDest = st.number_input(
+        "Destination old balance (oldbalanceDest)",
+        min_value=0.0,
+        value=0.0,
+        step=100.0
+    )
+
+    newbalanceDest = st.number_input(
+        "Destination new balance (newbalanceDest)",
+        min_value=0.0,
+        value=0.0,
+        step=100.0
+    )
 
     submitted = st.form_submit_button("Score transaction")
 
@@ -317,3 +347,4 @@ st.markdown(
 - ✅ Explainability: SHAP summary + bar plots (screenshots/embedded)
 """
 )
+
