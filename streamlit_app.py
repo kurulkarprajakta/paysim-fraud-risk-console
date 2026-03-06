@@ -151,11 +151,25 @@ st.markdown(
         }
 
         div[data-testid="stMetric"] {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 0.65rem;
-            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 0.55rem 0.7rem;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+}
+
+div[data-testid="stMetric"] label {
+    font-size: 0.82rem !important;
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-size: 1.05rem !important;
+    line-height: 1.15 !important;
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+    font-size: 0.8rem !important;
+}
         }
 
         div[data-testid="stTabs"] button {
@@ -771,4 +785,5 @@ with tab4:
                 st.image(shap_waterfall, caption="SHAP Waterfall Plot", use_container_width=True)
             else:
                 st.info("Missing models/shap_waterfall.png")
+
 
