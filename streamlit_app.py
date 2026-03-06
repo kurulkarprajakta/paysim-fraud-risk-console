@@ -67,15 +67,6 @@ st.markdown(
             margin-bottom: 1rem;
         }
 
-        .clean-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 1rem 1.1rem;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-            margin-bottom: 0.85rem;
-        }
-
         .summary-box {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -92,21 +83,6 @@ st.markdown(
             padding: 0.95rem 1rem;
             color: #1e3a8a;
             margin-top: 0.8rem;
-        }
-
-        .small-label {
-            color: #64748b;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-bottom: 0.15rem;
-        }
-
-        .big-value {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: #0f172a;
         }
 
         .risk-high {
@@ -212,6 +188,36 @@ def load_assets():
     return assets
 
 
+@st.cache_data
+def load_metrics():
+    csv_path = safe_path(MODELS_DIR, "model_comparison.csv")
+    if file_exists(csv_path):
+        df = pd.read_csv(csv_path)
+
+        rename_map = {
+            "ROC AUC": "ROC_AUC",
+            "PR AUC": "PR_AUC",
+            "F1 Score": "F1",
+        }
+        df = df.rename(columns=rename_map)
+
+        desired_cols = ["Model", "Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"]
+        existing_cols = [c for c in desired_cols if c in df.columns]
+        if existing_cols:
+            df = df[existing_cols]
+        return df
+
+    # Fallback if CSV missing
+    metrics = [
+        {"Model": "XGBoost", "Accuracy": 0.999825, "Precision": 0.991304, "Recall": 0.850746, "F1": 0.915663, "ROC_AUC": 0.997263, "PR_AUC": 0.926423},
+        {"Model": "Random Forest", "Accuracy": 0.999687, "Precision": 0.989848, "Recall": 0.727612, "F1": 0.838710, "ROC_AUC": 0.984813, "PR_AUC": 0.916957},
+        {"Model": "MLP", "Accuracy": 0.999487, "Precision": 0.993197, "Recall": 0.544776, "F1": 0.703614, "ROC_AUC": 0.979838, "PR_AUC": 0.741544},
+        {"Model": "Decision Tree", "Accuracy": 0.991592, "Precision": 0.110419, "Recall": 0.925373, "F1": 0.197295, "ROC_AUC": 0.961404, "PR_AUC": 0.622175},
+        {"Model": "Logistic Regression", "Accuracy": 0.940196, "Precision": 0.017868, "Recall": 0.973881, "F1": 0.035092, "ROC_AUC": 0.984469, "PR_AUC": 0.584643},
+    ]
+    return pd.DataFrame(metrics)
+
+
 def make_input_df(
     tx_type: str,
     amount: float,
@@ -311,7 +317,7 @@ def format_pct(x: float) -> str:
 
 
 # =========================================================
-# Load assets
+# Load assets and metrics
 # =========================================================
 try:
     assets = load_assets()
@@ -319,18 +325,17 @@ except Exception as e:
     st.error(f"Failed to load models or preprocessing assets: {e}")
     st.stop()
 
+df_metrics = load_metrics()
 
-# =========================================================
-# Static model metrics
-# =========================================================
-metrics = [
-    {"Model": "XGBoost", "Accuracy": 0.999825, "Precision": 0.991304, "Recall": 0.850746, "F1": 0.915663, "ROC_AUC": 0.997263, "PR_AUC": 0.926423},
-    {"Model": "Random Forest", "Accuracy": 0.999687, "Precision": 0.989848, "Recall": 0.727612, "F1": 0.838710, "ROC_AUC": 0.984813, "PR_AUC": 0.916957},
-    {"Model": "MLP", "Accuracy": 0.999487, "Precision": 0.993197, "Recall": 0.544776, "F1": 0.703614, "ROC_AUC": 0.979838, "PR_AUC": 0.741544},
-    {"Model": "Decision Tree", "Accuracy": 0.991592, "Precision": 0.110419, "Recall": 0.925373, "F1": 0.197295, "ROC_AUC": 0.961404, "PR_AUC": 0.622175},
-    {"Model": "Logistic Regression", "Accuracy": 0.940196, "Precision": 0.017868, "Recall": 0.973881, "F1": 0.035092, "ROC_AUC": 0.984469, "PR_AUC": 0.584643},
-]
-df_metrics = pd.DataFrame(metrics)
+# Normalize model names for display consistency
+name_map = {
+    "Decision Tree (CV)": "Decision Tree",
+    "Random Forest (CV)": "Random Forest",
+    "XGBoost (CV)": "XGBoost",
+    "MLP (Keras)": "MLP",
+}
+df_metrics["Model"] = df_metrics["Model"].replace(name_map)
+
 best_row = df_metrics.sort_values(["F1", "ROC_AUC"], ascending=False).iloc[0]
 
 
@@ -466,6 +471,7 @@ with tab2:
     eda2 = safe_path(MODELS_DIR, "eda_transaction_type.png")
     eda3 = safe_path(MODELS_DIR, "eda_amount_distribution.png")
     eda4 = safe_path(MODELS_DIR, "eda_correlation_heatmap.png")
+    eda5 = safe_path(MODELS_DIR, "fraud_rate_over_time.png")
 
     c1, c2 = st.columns(2)
 
@@ -481,6 +487,12 @@ with tab2:
             st.caption("Transaction amounts are highly skewed, so a log-scale view makes fraud-related differences easier to interpret.")
         else:
             st.warning("Missing models/eda_amount_distribution.png")
+
+        if file_exists(eda5):
+            st.image(eda5, caption="Fraud rate over time", use_container_width=True)
+            st.caption("Fraud behavior varies across time steps, though these peaks should be interpreted cautiously because fraud is rare.")
+        else:
+            st.info("Optional plot missing: models/fraud_rate_over_time.png")
 
     with c2:
         if file_exists(eda2):
@@ -523,13 +535,15 @@ with tab3:
         """
     )
 
+    metric_cols = [c for c in ["Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
     st.dataframe(
-        df_metrics.style.highlight_max(subset=["F1", "ROC_AUC", "PR_AUC"], color="#dbeafe"),
+        df_metrics.style.highlight_max(subset=[c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns], color="#dbeafe"),
         use_container_width=True,
     )
 
     st.markdown("#### Metric Comparison")
-    chart_df = df_metrics.set_index("Model")[["F1", "ROC_AUC", "PR_AUC"]]
+    chart_cols = [c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
+    chart_df = df_metrics.set_index("Model")[chart_cols]
     st.bar_chart(chart_df)
 
     a, b = st.columns([1, 1])
@@ -636,12 +650,7 @@ with tab4:
     with control_col:
         st.markdown("#### Interactive Prediction")
 
-        model_options = [
-            "XGBoost",
-            "Random Forest",
-            "Decision Tree",
-            "Logistic Regression",
-        ]
+        model_options = ["XGBoost", "Random Forest", "Decision Tree", "Logistic Regression"]
         if TF_AVAILABLE and assets.get("mlp") is not None:
             model_options.append("MLP")
 
@@ -774,7 +783,7 @@ with tab4:
         """
         SHAP plots are used to explain which variables contribute most to model predictions.
         The summary plot shows overall feature impact across many observations, the bar plot ranks
-        global importance, and the waterfall plot explains one example prediction.
+        global importance, and the waterfall plot explains one example prediction from the final tree-based model.
         """
     )
 
@@ -799,6 +808,6 @@ with tab4:
     st.markdown("#### Waterfall Example")
     if file_exists(shap_waterfall):
         st.image(shap_waterfall, caption="SHAP Waterfall Plot for an Example Prediction", use_container_width=True)
-        st.caption("This waterfall plot explains one representative prediction from the trained tree-based model.")
+        st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
     else:
         st.info("Missing models/shap_waterfall.png")
