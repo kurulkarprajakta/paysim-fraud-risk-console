@@ -413,6 +413,49 @@ with tab3:
     else:
         st.info("Add `models/best_params.json` if you want tuned hyperparameters displayed here.")
 
+    st.markdown("### ROC / Precision-Recall Curves")
+
+    roc_lr = safe_path(MODELS_DIR, "logistic_regression_roc_curve.png")
+    pr_lr = safe_path(MODELS_DIR, "logistic_regression_pr_curve.png")
+    roc_rf = safe_path(MODELS_DIR, "random_forest_roc_curve.png")
+    pr_rf = safe_path(MODELS_DIR, "random_forest_pr_curve.png")
+    roc_dt = safe_path(MODELS_DIR, "decision_tree_roc_curve.png")
+    pr_dt = safe_path(MODELS_DIR, "decision_tree_pr_curve.png")
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        if file_exists(roc_rf):
+            st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
+        else:
+            st.info("Add models/random_forest_roc_curve.png")
+
+        if file_exists(roc_lr):
+            st.image(roc_lr, caption="Logistic Regression ROC Curve", use_container_width=True)
+        else:
+            st.info("Add models/logistic_regression_roc_curve.png")
+
+        if file_exists(roc_dt):
+            st.image(roc_dt, caption="Decision Tree ROC Curve", use_container_width=True)
+        else:
+            st.info("Add models/decision_tree_roc_curve.png")
+
+    with c2:
+        if file_exists(pr_rf):
+            st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
+        else:
+            st.info("Add models/random_forest_pr_curve.png")
+
+        if file_exists(pr_lr):
+            st.image(pr_lr, caption="Logistic Regression Precision-Recall Curve", use_container_width=True)
+        else:
+            st.info("Add models/logistic_regression_pr_curve.png")
+
+        if file_exists(pr_dt):
+            st.image(pr_dt, caption="Decision Tree Precision-Recall Curve", use_container_width=True)
+        else:
+            st.info("Add models/decision_tree_pr_curve.png")
+
 # -----------------------------
 # Tab 4 - Explainability & Prediction
 # -----------------------------
@@ -517,3 +560,4 @@ with tab4:
             st.image(shap_waterfall, caption="SHAP Waterfall (Example Prediction)", use_container_width=True)
         else:
             st.caption("Optional: add models/shap_waterfall.png for a single-prediction explanation.")
+
