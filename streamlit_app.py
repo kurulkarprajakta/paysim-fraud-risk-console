@@ -120,32 +120,35 @@ def predict_proba(model, Xp):
     raise RuntimeError("Model does not support probability prediction.")
 
 def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
-    preprocess = assets["preprocess"]
-    Xp = preprocess_row(preprocess, X_df)
-
+    # Classical sklearn/xgboost models appear to be saved as full pipelines
+    # that already include preprocessing internally.
     if model_name == "Logistic Regression":
         if assets["lr"] is None:
             raise FileNotFoundError("lr.pkl not found in /models.")
-        return predict_proba(assets["lr"], Xp)
+        return predict_proba(assets["lr"], X_df)
 
     if model_name == "Decision Tree (CV)":
         if assets["tree"] is None:
             raise FileNotFoundError("tree.pkl not found in /models.")
-        return predict_proba(assets["tree"], Xp)
+        return predict_proba(assets["tree"], X_df)
 
     if model_name == "Random Forest (CV)":
         if assets["rf"] is None:
             raise FileNotFoundError("rf.pkl not found in /models.")
-        return predict_proba(assets["rf"], Xp)
+        return predict_proba(assets["rf"], X_df)
 
     if model_name == "XGBoost (CV)":
         if assets["xgb"] is None:
             raise FileNotFoundError("xgb.pkl not found in /models.")
-        return predict_proba(assets["xgb"], Xp)
+        return predict_proba(assets["xgb"], X_df)
 
     if model_name == "MLP (Keras)":
+        # MLP likely needs the separately saved preprocess object
         if (not TF_AVAILABLE) or (assets["mlp"] is None):
             raise RuntimeError("MLP is not available in this deployment (TensorFlow not installed).")
+
+        preprocess = assets["preprocess"]
+        Xp = preprocess_row(preprocess, X_df)
 
         if hasattr(Xp, "toarray"):
             X_dense = Xp.toarray()
@@ -345,3 +348,4 @@ st.markdown(
 - ✅ Explainability: SHAP summary + bar plots (screenshots/embedded)
 """
 )
+
