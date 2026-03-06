@@ -73,13 +73,15 @@ def load_assets():
 
     return assets
 
-def make_input_df(tx_type: str,
-                  amount: float,
-                  oldbalanceOrg: float,
-                  newbalanceOrig: float,
-                  oldbalanceDest: float,
-                  newbalanceDest: float,
-                  step: int = 1) -> pd.DataFrame:
+def make_input_df(
+    tx_type: str,
+    amount: float,
+    oldbalanceOrg: float,
+    newbalanceOrig: float,
+    oldbalanceDest: float,
+    newbalanceDest: float,
+    step: int = 1,
+) -> pd.DataFrame:
     """
     Create a single-row dataframe matching the training features.
     """
@@ -106,16 +108,15 @@ def preprocess_row(preprocess, X_df: pd.DataFrame):
 
 def predict_proba(model, Xp):
     """Return fraud probability for sklearn / xgboost models."""
-    # Some models have predict_proba
     if hasattr(model, "predict_proba"):
         proba = float(model.predict_proba(Xp)[:, 1][0])
         return proba
-    # Some xgboost versions may not expose predict_proba (rare)
+
     if hasattr(model, "predict"):
         pred = model.predict(Xp)
-        # If it returns a probability already:
         if np.isscalar(pred[0]) and 0.0 <= float(pred[0]) <= 1.0:
             return float(pred[0])
+
     raise RuntimeError("Model does not support probability prediction.")
 
 def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
@@ -125,33 +126,27 @@ def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
     if model_name == "Logistic Regression":
         if assets["lr"] is None:
             raise FileNotFoundError("lr.pkl not found in /models.")
-        proba = predict_proba(assets["lr"], Xp)
-        return proba
+        return predict_proba(assets["lr"], Xp)
 
     if model_name == "Decision Tree (CV)":
         if assets["tree"] is None:
             raise FileNotFoundError("tree.pkl not found in /models.")
-        proba = predict_proba(assets["tree"], Xp)
-        return proba
+        return predict_proba(assets["tree"], Xp)
 
     if model_name == "Random Forest (CV)":
         if assets["rf"] is None:
             raise FileNotFoundError("rf.pkl not found in /models.")
-        proba = predict_proba(assets["rf"], Xp)
-        return proba
+        return predict_proba(assets["rf"], Xp)
 
     if model_name == "XGBoost (CV)":
         if assets["xgb"] is None:
             raise FileNotFoundError("xgb.pkl not found in /models.")
-        proba = predict_proba(assets["xgb"], Xp)
-        return proba
+        return predict_proba(assets["xgb"], Xp)
 
     if model_name == "MLP (Keras)":
-        # MLP is optional; fail gracefully
         if (not TF_AVAILABLE) or (assets["mlp"] is None):
             raise RuntimeError("MLP is not available in this deployment (TensorFlow not installed).")
 
-        # Keras needs dense
         if hasattr(Xp, "toarray"):
             X_dense = Xp.toarray()
         else:
@@ -163,8 +158,7 @@ def predict_with_selected(model_name: str, assets, X_df: pd.DataFrame):
     raise ValueError(f"Unknown model: {model_name}")
 
 def risk_label(prob: float, threshold: float = 0.5):
-    label = "FRAUD" if prob >= threshold else "LEGIT"
-    return label
+    return "FRAUD" if prob >= threshold else "LEGIT"
 
 def format_pct(x: float) -> str:
     return f"{x*100:.2f}%"
@@ -188,8 +182,12 @@ threshold = st.sidebar.slider("Fraud decision threshold", 0.05, 0.95, 0.50, 0.01
 
 st.sidebar.divider()
 
-# Model options (MLP only if available)
-model_options = ["XGBoost (CV)", "Random Forest (CV)", "Decision Tree (CV)", "Logistic Regression"]
+model_options = [
+    "XGBoost (CV)",
+    "Random Forest (CV)",
+    "Decision Tree (CV)",
+    "Logistic Regression",
+]
 if TF_AVAILABLE and assets.get("mlp") is not None:
     model_options.append("MLP (Keras)")
 
@@ -208,46 +206,46 @@ colA, colB = st.columns([1.2, 1])
 
 with colA:
     st.subheader("1) Enter transaction details")
+
     with st.form("tx_form", clear_on_submit=False):
+        step = st.number_input("Step (time step)", min_value=1, value=1, step=1)
 
-    step = st.number_input("Step (time step)", min_value=1, value=1, step=1)
+        tx_type = st.selectbox(
+            "Transaction type",
+            ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"]
+        )
 
-    tx_type = st.selectbox(
-        "Transaction type",
-        ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"]
-    )
+        amount = st.number_input("Amount", min_value=0.0, value=100000.0, step=100.0)
 
-    amount = st.number_input("Amount", min_value=0.0, value=100000.0, step=100.0)
+        oldbalanceOrg = st.number_input(
+            "Origin old balance (oldbalanceOrg)",
+            min_value=0.0,
+            value=100000.0,
+            step=100.0
+        )
 
-    oldbalanceOrg = st.number_input(
-        "Origin old balance (oldbalanceOrg)",
-        min_value=0.0,
-        value=100000.0,
-        step=100.0
-    )
+        newbalanceOrig = st.number_input(
+            "Origin new balance (newbalanceOrig)",
+            min_value=0.0,
+            value=0.0,
+            step=100.0
+        )
 
-    newbalanceOrig = st.number_input(
-        "Origin new balance (newbalanceOrig)",
-        min_value=0.0,
-        value=0.0,
-        step=100.0
-    )
+        oldbalanceDest = st.number_input(
+            "Destination old balance (oldbalanceDest)",
+            min_value=0.0,
+            value=0.0,
+            step=100.0
+        )
 
-    oldbalanceDest = st.number_input(
-        "Destination old balance (oldbalanceDest)",
-        min_value=0.0,
-        value=0.0,
-        step=100.0
-    )
+        newbalanceDest = st.number_input(
+            "Destination new balance (newbalanceDest)",
+            min_value=0.0,
+            value=0.0,
+            step=100.0
+        )
 
-    newbalanceDest = st.number_input(
-        "Destination new balance (newbalanceDest)",
-        min_value=0.0,
-        value=0.0,
-        step=100.0
-    )
-
-    submitted = st.form_submit_button("Score transaction")
+        submitted = st.form_submit_button("Score transaction")
 
 with colB:
     st.subheader("2) Score & decision")
@@ -256,14 +254,14 @@ with colB:
 
     if submitted:
         X_df = make_input_df(
-    step=step,
-    tx_type=tx_type,
-    amount=amount,
-    oldbalanceOrg=oldbalanceOrg,
-    newbalanceOrig=newbalanceOrig,
-    oldbalanceDest=oldbalanceDest,
-    newbalanceDest=newbalanceDest,
-)
+            step=step,
+            tx_type=tx_type,
+            amount=amount,
+            oldbalanceOrg=oldbalanceOrg,
+            newbalanceOrig=newbalanceOrig,
+            oldbalanceDest=oldbalanceDest,
+            newbalanceDest=newbalanceDest,
+        )
 
         try:
             prob = predict_with_selected(selected_model, assets, X_df)
@@ -285,7 +283,7 @@ with colB:
 st.divider()
 
 # -----------------------------
-# Model comparison table (your results)
+# Model comparison table
 # -----------------------------
 st.subheader("3) Model performance summary (from your HW run)")
 
@@ -298,7 +296,6 @@ metrics = [
 ]
 df_metrics = pd.DataFrame(metrics)
 
-# Note about MLP availability
 if not (TF_AVAILABLE and assets.get("mlp") is not None):
     st.info("Note: MLP scores above are from training results, but the MLP model may be disabled in this deployment if TensorFlow is unavailable.")
 
@@ -316,6 +313,7 @@ shap_bar = safe_path(MODELS_DIR, "shap_bar.png")
 shap_waterfall = safe_path(MODELS_DIR, "shap_waterfall.png")
 
 c1, c2 = st.columns(2)
+
 with c1:
     if file_exists(shap_summary):
         st.image(shap_summary, caption="SHAP Summary Plot", use_container_width=True)
@@ -347,4 +345,3 @@ st.markdown(
 - ✅ Explainability: SHAP summary + bar plots (screenshots/embedded)
 """
 )
-
