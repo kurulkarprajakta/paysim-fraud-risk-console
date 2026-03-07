@@ -216,6 +216,7 @@ def load_metrics():
     csv_path = safe_path(MODELS_DIR, "model_comparison.csv")
     if file_exists(csv_path):
         df = pd.read_csv(csv_path)
+        df = df.loc[:, ~df.columns.str.contains(r"^Unnamed")]
         rename_map = {
             "ROC AUC": "ROC_AUC",
             "PR AUC": "PR_AUC",
@@ -869,3 +870,4 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
+
