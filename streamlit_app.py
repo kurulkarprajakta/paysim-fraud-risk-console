@@ -4,6 +4,8 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
+import shap
+import matplotlib.pyplot as plt
 
 # Optional TensorFlow / Keras
 try:
@@ -357,6 +359,89 @@ def recommended_action(prob: float, threshold: float) -> str:
 
 def format_pct(x: float) -> str:
     return f"{x * 100:.2f}%"
+
+
+def build_feature_names(preprocess, input_df: pd.DataFrame, X_processed=None):
+    """
+    Build processed feature names after preprocessing.
+    Falls back safely if extraction fails.
+    """
+    try:
+        if hasattr(preprocess, "get_feature_names_out"):
+            names = preprocess.get_feature_names_out()
+            return list(names)
+    except Exception:
+        pass
+
+    if X_processed is not None:
+        n_features = X_processed.shape[1]
+        base_cols = input_df.columns.tolist()
+
+        if len(base_cols) == n_features:
+            return base_cols
+
+        return [f"Feature {i}" for i in range(n_features)]
+
+    return input_df.columns.tolist()
+
+
+def plot_custom_shap_waterfall(assets, X_df: pd.DataFrame):
+    """
+    Generate a SHAP waterfall plot for one custom input using the saved XGBoost pipeline.
+    Returns a matplotlib figure.
+    """
+    if assets["xgb"] is None:
+        raise RuntimeError("XGBoost model is not available for SHAP explanation.")
+
+    xgb_pipeline = assets["xgb"]
+
+    preprocess = assets["preprocess"]
+    model = None
+
+    if hasattr(xgb_pipeline, "named_steps"):
+        steps = xgb_pipeline.named_steps
+
+        for key in ["preprocess", "preprocessor", "transformer"]:
+            if key in steps:
+                preprocess = steps[key]
+                break
+
+        for key in ["model", "classifier", "xgb", "xgbclassifier"]:
+            if key in steps:
+                model = steps[key]
+                break
+
+        if model is None:
+            model = list(steps.values())[-1]
+    else:
+        model = xgb_pipeline
+
+    X_processed = preprocess.transform(X_df)
+    if hasattr(X_processed, "toarray"):
+        X_processed = X_processed.toarray()
+
+    feature_names = build_feature_names(preprocess, X_df, X_processed)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_processed)
+
+    if isinstance(shap_values, list):
+        shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+
+    expected_value = explainer.expected_value
+    if isinstance(expected_value, (list, np.ndarray)):
+        expected_value = expected_value[1] if len(np.atleast_1d(expected_value)) > 1 else expected_value[0]
+
+    exp = shap.Explanation(
+        values=shap_values[0],
+        base_values=expected_value,
+        data=X_processed[0],
+        feature_names=feature_names,
+    )
+
+    fig = plt.figure(figsize=(10, 6))
+    shap.plots.waterfall(exp, max_display=15, show=False)
+    return fig
 
 
 # =========================================================
@@ -953,16 +1038,23 @@ This helps identify sudden increases in recipient balances.
         else:
             st.warning("Missing models/shap_bar.png")
 
-    st.markdown("#### Waterfall Example")
-    wf_left, wf_center, wf_right = st.columns([0.12, 0.76, 0.12])
+    st.markdown("#### SHAP Waterfall for Current Input")
+    wf_left, wf_center, wf_right = st.columns([0.08, 0.84, 0.08])
 
     with wf_center:
-        if file_exists(shap_waterfall):
-            st.image(
-                shap_waterfall,
-                caption="SHAP Waterfall Plot for an Example Prediction",
-                use_container_width=True
-            )
-            st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
+        if "last_input" in st.session_state:
+            try:
+                shap_fig = plot_custom_shap_waterfall(assets, st.session_state["last_input"])
+                st.pyplot(shap_fig, clear_figure=True, use_container_width=True)
+                plt.close(shap_fig)
+                st.caption("This waterfall plot explains the custom transaction you just scored.")
+            except Exception as e:
+                st.warning(f"Could not generate custom SHAP waterfall: {e}")
+                if file_exists(shap_waterfall):
+                    st.image(
+                        shap_waterfall,
+                        caption="Fallback: Example SHAP Waterfall Plot",
+                        use_container_width=True
+                    )
         else:
-            st.info("Missing models/shap_waterfall.png")
+            st.info("Run a prediction first to generate a SHAP waterfall for your custom input.")
