@@ -575,7 +575,8 @@ with tab3:
 
     st.dataframe(display_df.reset_index(drop=True), use_container_width=True)
 
-    st.markdown("#### Metric Comparison")
+    st.markdown("#### Key Metric Comparison")
+    st.caption("This chart focuses on F1, ROC-AUC, and PR-AUC because these are the most informative metrics for highly imbalanced fraud detection problems.")
     chart_cols = [c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
     chart_df = df_metrics.set_index("Model")[chart_cols]
     st.bar_chart(chart_df)
@@ -870,4 +871,5 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
+
 
