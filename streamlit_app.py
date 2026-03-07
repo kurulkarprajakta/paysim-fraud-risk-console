@@ -570,34 +570,58 @@ with tab3:
         unsafe_allow_html=True
     )
 
-    st.write(
+    st.markdown(
         """
-        Five models were evaluated: Logistic Regression, Decision Tree, Random Forest, XGBoost, and MLP.
-        Because fraud is rare, the most important evaluation measures are Recall, F1 score, ROC-AUC, and PR-AUC.
-        """
+        <div class="summary-box">
+            <b>How to read this section</b><br>
+            The table below reports all evaluation metrics across the five models trained in this project.
+            Because fraud detection is a highly imbalanced classification problem, the most informative metrics are
+            <b>Recall</b>, <b>F1</b>, <b>ROC-AUC</b>, and <b>PR-AUC</b>. The comparison chart therefore emphasizes the
+            key metrics that are most relevant for rare-event detection.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    # Clean table for display
     display_df = df_metrics.copy()
+
     if "Model" in display_df.columns:
         display_df = display_df[display_df["Model"].notna()]
         display_df = display_df[display_df["Model"].astype(str).str.strip() != ""]
-    display_df = display_df.dropna(how="all")
 
-    for col in metric_cols:
+    display_df = display_df.dropna(how="all")
+    display_df = display_df.loc[:, ~display_df.columns.astype(str).str.contains(r"^Unnamed")]
+
+    wanted_cols = ["Model", "Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"]
+    display_df = display_df[[c for c in wanted_cols if c in display_df.columns]]
+
+    for col in ["Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"]:
         if col in display_df.columns:
             display_df[col] = pd.to_numeric(display_df[col], errors="coerce").round(3)
 
+    st.markdown("#### Model Comparison Table")
     st.dataframe(display_df.reset_index(drop=True), use_container_width=True)
 
+    st.markdown("<div style='height: 0.55rem;'></div>", unsafe_allow_html=True)
+
     st.markdown("#### Key Metric Comparison")
-    st.caption("This chart focuses on F1, ROC-AUC, and PR-AUC because these are the most informative metrics for highly imbalanced fraud detection problems.")
+    st.caption(
+        "This chart focuses on F1, ROC-AUC, and PR-AUC because these are the most informative metrics for highly imbalanced fraud detection problems."
+    )
+
     chart_cols = [c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
-    chart_df = df_metrics.set_index("Model")[chart_cols]
+    chart_df = df_metrics.copy()
+    chart_df = chart_df.loc[:, ~chart_df.columns.astype(str).str.contains(r"^Unnamed")]
+    chart_df = chart_df.dropna(how="all")
+    chart_df = chart_df.set_index("Model")[chart_cols]
     st.bar_chart(chart_df)
 
-    a, b = st.columns(2)
+    st.markdown("<div style='height: 0.6rem;'></div>", unsafe_allow_html=True)
 
-    with a:
+    top_left, top_right = st.columns(2)
+
+    with top_left:
         with st.expander("Best Hyperparameters", expanded=False):
             best_params_path = safe_path(MODELS_DIR, "best_params.json")
             if file_exists(best_params_path):
@@ -610,14 +634,14 @@ with tab3:
             else:
                 st.info("Missing models/best_params.json")
 
-    with b:
-        with st.expander("Interpretation", expanded=False):
+    with top_right:
+        with st.expander("Performance Interpretation", expanded=False):
             st.write(
                 """
-                XGBoost produced the strongest overall results and was selected as the final model.
-                Random Forest also performed well and provided a strong ensemble benchmark.
-                Logistic Regression and Decision Tree were useful baselines, but they were less balanced in performance.
-                The MLP achieved good precision, though its recall and F1 were lower than the best tree-based ensemble.
+                XGBoost delivered the strongest overall performance and was selected as the final model for deployment.
+                Random Forest also performed strongly and served as a robust ensemble benchmark.
+                Logistic Regression and Decision Tree were useful baseline models, but they showed weaker balance across the key fraud-detection metrics.
+                The MLP achieved good precision, though its recall and F1 remained below the best-performing tree-based ensemble.
                 """
             )
 
@@ -631,58 +655,55 @@ with tab3:
         roc_xgb = safe_path(MODELS_DIR, "xgboost_roc_curve.png")
         pr_xgb = safe_path(MODELS_DIR, "xgboost_pr_curve.png")
 
-        left, right = st.columns(2)
+        st.markdown("##### ROC Curves")
+        roc_c1, roc_c2 = st.columns(2)
 
-        with left:
-            shown_any = False
+        with roc_c1:
             if file_exists(roc_xgb):
                 st.image(roc_xgb, caption="XGBoost ROC Curve", use_container_width=True)
-                shown_any = True
-            if file_exists(roc_rf):
-                st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
-                shown_any = True
             if file_exists(roc_lr):
                 st.image(roc_lr, caption="Logistic Regression ROC Curve", use_container_width=True)
-                shown_any = True
+
+        with roc_c2:
+            if file_exists(roc_rf):
+                st.image(roc_rf, caption="Random Forest ROC Curve", use_container_width=True)
             if file_exists(roc_dt):
                 st.image(roc_dt, caption="Decision Tree ROC Curve", use_container_width=True)
-                shown_any = True
-            if not shown_any:
-                st.info("No ROC curve image files found.")
 
-        with right:
-            shown_any = False
+        st.markdown("<div style='height: 0.55rem;'></div>", unsafe_allow_html=True)
+
+        st.markdown("##### Precision-Recall Curves")
+        pr_c1, pr_c2 = st.columns(2)
+
+        with pr_c1:
             if file_exists(pr_xgb):
                 st.image(pr_xgb, caption="XGBoost Precision-Recall Curve", use_container_width=True)
-                shown_any = True
-            if file_exists(pr_rf):
-                st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
-                shown_any = True
             if file_exists(pr_lr):
                 st.image(pr_lr, caption="Logistic Regression Precision-Recall Curve", use_container_width=True)
-                shown_any = True
+
+        with pr_c2:
+            if file_exists(pr_rf):
+                st.image(pr_rf, caption="Random Forest Precision-Recall Curve", use_container_width=True)
             if file_exists(pr_dt):
                 st.image(pr_dt, caption="Decision Tree Precision-Recall Curve", use_container_width=True)
-                shown_any = True
-            if not shown_any:
-                st.info("No Precision-Recall curve image files found.")
 
     with st.expander("MLP Training History", expanded=False):
         mlp_loss = safe_path(MODELS_DIR, "mlp_loss_curve.png")
         mlp_auc = safe_path(MODELS_DIR, "mlp_auc_curve.png")
 
-        col_l, col_r = st.columns(2)
-        with col_l:
+        hist_c1, hist_c2 = st.columns(2)
+
+        with hist_c1:
             if file_exists(mlp_loss):
                 st.image(mlp_loss, caption="MLP Loss Curve", use_container_width=True)
             else:
                 st.info("Missing models/mlp_loss_curve.png")
-        with col_r:
+
+        with hist_c2:
             if file_exists(mlp_auc):
                 st.image(mlp_auc, caption="MLP AUC Curve", use_container_width=True)
             else:
                 st.info("Missing models/mlp_auc_curve.png")
-
 
 # =========================================================
 # Tab 4 — Explainability & Interactive Prediction
@@ -885,6 +906,7 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
+
 
 
 
