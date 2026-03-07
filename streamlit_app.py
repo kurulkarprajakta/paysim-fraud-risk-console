@@ -34,55 +34,73 @@ st.markdown(
     """
     <style>
         .block-container {
-            max-width: 1220px;
-            padding-top: 1.2rem;
+            max-width: 1240px;
+            padding-top: 4.2rem;
             padding-bottom: 2rem;
         }
 
-        .main-title {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #0f172a;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.2rem;
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #172554 45%, #2563eb 100%);
+            color: white;
+            border-radius: 24px;
+            padding: 1.6rem 1.8rem;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
         }
 
-        .main-subtitle {
+        .hero-title {
+            font-size: 2.1rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
             font-size: 1rem;
-            color: #475569;
-            margin-bottom: 1.2rem;
-            max-width: 920px;
+            color: rgba(255,255,255,0.90);
+            max-width: 980px;
         }
 
         .section-title {
-            font-size: 1.45rem;
+            font-size: 1.5rem;
             font-weight: 800;
-            color: #111827;
-            margin-top: 0.2rem;
+            color: #0f172a;
+            margin-top: 0.25rem;
             margin-bottom: 0.2rem;
         }
 
         .section-subtitle {
-            color: #6b7280;
+            color: #64748b;
             margin-bottom: 1rem;
         }
 
         .summary-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 0.95rem 1rem;
-            margin-bottom: 0.85rem;
-            color: #334155;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid #dbeafe;
+            border-radius: 18px;
+            padding: 1rem 1rem;
+            margin-bottom: 0.9rem;
+            color: #1e293b;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
 
         .takeaway-box {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 16px;
-            padding: 0.95rem 1rem;
-            color: #1e3a8a;
-            margin-top: 0.8rem;
+            background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+            border: 1px solid #93c5fd;
+            border-radius: 18px;
+            padding: 1rem 1rem;
+            color: #1d4ed8;
+            margin-top: 0.9rem;
+            box-shadow: 0 2px 10px rgba(37,99,235,0.08);
+        }
+
+        .info-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 0.9rem 1rem;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
 
         .risk-high {
@@ -123,15 +141,15 @@ st.markdown(
         }
 
         div[data-testid="stMetric"] {
-            background: white;
+            background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 16px;
-            padding: 0.65rem 0.8rem;
+            padding: 0.7rem 0.85rem;
             box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
 
         .tiny-note {
-            color: #6b7280;
+            color: #64748b;
             font-size: 0.9rem;
         }
     </style>
@@ -193,21 +211,14 @@ def load_metrics():
     csv_path = safe_path(MODELS_DIR, "model_comparison.csv")
     if file_exists(csv_path):
         df = pd.read_csv(csv_path)
-
         rename_map = {
             "ROC AUC": "ROC_AUC",
             "PR AUC": "PR_AUC",
             "F1 Score": "F1",
         }
         df = df.rename(columns=rename_map)
-
-        desired_cols = ["Model", "Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"]
-        existing_cols = [c for c in desired_cols if c in df.columns]
-        if existing_cols:
-            df = df[existing_cols]
         return df
 
-    # Fallback if CSV missing
     metrics = [
         {"Model": "XGBoost", "Accuracy": 0.999825, "Precision": 0.991304, "Recall": 0.850746, "F1": 0.915663, "ROC_AUC": 0.997263, "PR_AUC": 0.926423},
         {"Model": "Random Forest", "Accuracy": 0.999687, "Precision": 0.989848, "Recall": 0.727612, "F1": 0.838710, "ROC_AUC": 0.984813, "PR_AUC": 0.916957},
@@ -325,16 +336,20 @@ except Exception as e:
     st.error(f"Failed to load models or preprocessing assets: {e}")
     st.stop()
 
-df_metrics = load_metrics()
+df_metrics = load_metrics().copy()
 
-# Normalize model names for display consistency
 name_map = {
     "Decision Tree (CV)": "Decision Tree",
     "Random Forest (CV)": "Random Forest",
     "XGBoost (CV)": "XGBoost",
     "MLP (Keras)": "MLP",
 }
-df_metrics["Model"] = df_metrics["Model"].replace(name_map)
+if "Model" in df_metrics.columns:
+    df_metrics["Model"] = df_metrics["Model"].replace(name_map)
+
+metric_cols = [c for c in ["Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
+for col in metric_cols:
+    df_metrics[col] = pd.to_numeric(df_metrics[col], errors="coerce")
 
 best_row = df_metrics.sort_values(["F1", "ROC_AUC"], ascending=False).iloc[0]
 
@@ -361,10 +376,17 @@ if not TF_AVAILABLE:
 # =========================================================
 # Header
 # =========================================================
-st.markdown('<div class="main-title">PaySim Fraud Detection Workflow</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="main-subtitle">A clean end-to-end machine learning application for detecting fraudulent mobile money transactions using descriptive analytics, predictive modeling, explainability, and interactive scoring.</div>',
-    unsafe_allow_html=True
+    f"""
+    <div class="hero">
+        <div class="hero-title">PaySim Fraud Detection Workflow</div>
+        <div class="hero-subtitle">
+            A clean end-to-end machine learning application for detecting fraudulent mobile money transactions using descriptive analytics,
+            predictive modeling, explainability, and interactive scoring.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -387,7 +409,7 @@ with tab1:
         unsafe_allow_html=True
     )
 
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown(
@@ -535,18 +557,18 @@ with tab3:
         """
     )
 
-    metric_cols = [c for c in ["Accuracy", "Precision", "Recall", "F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
-    st.dataframe(
-        df_metrics.style.highlight_max(subset=[c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns], color="#dbeafe"),
-        use_container_width=True,
-    )
+    display_df = df_metrics.copy()
+    for col in metric_cols:
+        display_df[col] = display_df[col].round(3)
+
+    st.dataframe(display_df, use_container_width=True)
 
     st.markdown("#### Metric Comparison")
     chart_cols = [c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
     chart_df = df_metrics.set_index("Model")[chart_cols]
     st.bar_chart(chart_df)
 
-    a, b = st.columns([1, 1])
+    a, b = st.columns(2)
 
     with a:
         with st.expander("Best Hyperparameters", expanded=False):
@@ -645,7 +667,7 @@ with tab4:
         unsafe_allow_html=True
     )
 
-    control_col, result_col = st.columns([1.0, 1.0])
+    control_col, result_col = st.columns(2)
 
     with control_col:
         st.markdown("#### Interactive Prediction")
@@ -770,9 +792,7 @@ with tab4:
             with st.expander("Input row used for prediction", expanded=False):
                 st.dataframe(X_df, use_container_width=True)
 
-            st.caption(
-                "A transaction is classified as fraud when its predicted probability exceeds the selected threshold."
-            )
+            st.caption("A transaction is classified as fraud when its predicted probability exceeds the selected threshold.")
         else:
             st.info("Enter transaction values and run a prediction to view the model output.")
 
