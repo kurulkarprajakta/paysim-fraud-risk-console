@@ -34,7 +34,8 @@ st.markdown(
     """
     <style>
         .block-container {
-            max-width: 95%;
+            max-width: 1400px;
+            margin: auto;
             padding-top: 4rem;
             padding-bottom: 2rem;
         }
@@ -129,8 +130,27 @@ st.markdown(
             font-size: 0.9rem;
         }
 
+        /* ===== Professional Tabs ===== */
+        div[data-testid="stTabs"] {
+            margin-top: 0.5rem;
+        }
+
         div[data-testid="stTabs"] button {
             font-weight: 700;
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            margin-right: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        div[data-testid="stTabs"] button:hover {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
         }
 
         div[data-testid="stMetric"] {
@@ -152,6 +172,11 @@ st.markdown(
 
         div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
             font-size: 0.75rem !important;
+        }
+
+        div[data-testid="stCaptionContainer"] {
+            margin-top: -0.15rem;
+            margin-bottom: 0.45rem;
         }
 
         .tiny-note {
@@ -502,7 +527,6 @@ with tab2:
     eda4 = safe_path(MODELS_DIR, "eda_correlation_heatmap.png")
     eda5 = safe_path(MODELS_DIR, "fraud_rate_over_time.png")
 
-    # Row 1
     r1c1, r1c2 = st.columns(2)
 
     with r1c1:
@@ -521,7 +545,6 @@ with tab2:
 
     st.markdown("<div style='height: 0.7rem;'></div>", unsafe_allow_html=True)
 
-    # Row 2
     r2c1, r2c2 = st.columns(2)
 
     with r2c1:
@@ -540,7 +563,6 @@ with tab2:
 
     st.markdown("<div style='height: 0.7rem;'></div>", unsafe_allow_html=True)
 
-    # Row 3 - centered single chart
     st.markdown("#### Additional Descriptive View")
     center_left, center_col, center_right = st.columns([0.15, 0.70, 0.15])
 
@@ -560,6 +582,7 @@ with tab2:
         and imbalance-aware evaluation metrics in later stages of the workflow.
         """
     )
+
 
 # =========================================================
 # Tab 3 — Model Performance
@@ -584,13 +607,10 @@ with tab3:
         unsafe_allow_html=True,
     )
 
-    # Clean table for display
     display_df = df_metrics.copy()
-
     if "Model" in display_df.columns:
         display_df = display_df[display_df["Model"].notna()]
         display_df = display_df[display_df["Model"].astype(str).str.strip() != ""]
-
     display_df = display_df.dropna(how="all")
     display_df = display_df.loc[:, ~display_df.columns.astype(str).str.contains(r"^Unnamed")]
 
@@ -705,6 +725,7 @@ with tab3:
                 st.image(mlp_auc, caption="MLP AUC Curve", use_container_width=True)
             else:
                 st.info("Missing models/mlp_auc_curve.png")
+
 
 # =========================================================
 # Tab 4 — Explainability & Interactive Prediction
@@ -868,11 +889,49 @@ with tab4:
     st.markdown("---")
     st.markdown("#### Explainability")
 
+    with st.expander("Feature Guide (How to read the SHAP plots)", expanded=False):
+        st.markdown("""
+These features represent transaction characteristics used by the fraud detection model.
+
+**Core Transaction Features**
+
+• **step** — Time step representing the sequence of transactions in the simulation.
+
+• **type** — Transaction type such as TRANSFER, CASH_OUT, PAYMENT, etc.
+
+• **amount** — Transaction amount being transferred.
+
+**Account Balance Features**
+
+• **oldbalanceOrg** — Balance of the origin account before the transaction.
+
+• **newbalanceOrig** — Balance of the origin account after the transaction.
+
+• **oldbalanceDest** — Balance of the destination account before the transaction.
+
+• **newbalanceDest** — Balance of the destination account after the transaction.
+
+**Engineered Features**
+
+• **orig_balance_delta** — Change in origin account balance (oldbalanceOrg − newbalanceOrig).  
+This helps detect suspicious withdrawals or transfers.
+
+• **dest_balance_delta** — Change in destination account balance (newbalanceDest − oldbalanceDest).  
+This helps identify sudden increases in recipient balances.
+
+**How to interpret SHAP**
+
+• Features pushing the prediction **higher** increase fraud risk.  
+• Features pushing the prediction **lower** suggest legitimate behavior.
+""")
+
     st.write(
         """
-        The plots below help interpret the trained XGBoost model.
-        The summary plot shows how features influence predictions across many transactions,
-        the bar plot ranks the most important drivers globally, and the waterfall plot explains one example prediction step by step.
+        SHAP (SHapley Additive Explanations) helps interpret the fraud detection model.
+
+        • **Summary Plot** — Shows which features most strongly influence predictions across the dataset.  
+        • **Feature Importance Bar Plot** — Ranks variables by their overall contribution to model decisions.  
+        • **Waterfall Plot** — Explains a single prediction step-by-step, showing how each feature pushes the model toward fraud or legitimate classification.
         """
     )
 
@@ -907,8 +966,3 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
-
-
-
-
-
