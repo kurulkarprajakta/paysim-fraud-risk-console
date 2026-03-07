@@ -533,7 +533,7 @@ with tab1:
             """
             <div class="summary-box">
                 <b>Problem</b><br>
-                Fraudulent financial transactions are rare but costly. The goal of this project is to identify fraud accurately in a highly imbalanced transaction dataset.
+                Fraudulent financial transactions are rare but financially damaging. Detecting them accurately is challenging because fraud represents only a very small portion of all transactions. This project focuses on building a machine learning system that can identify fraudulent activity in a highly imbalanced dataset.
             </div>
             """,
             unsafe_allow_html=True,
@@ -542,7 +542,7 @@ with tab1:
             """
             <div class="summary-box">
                 <b>Dataset</b><br>
-                The analysis uses the PaySim synthetic mobile money transaction dataset, including transaction type, amount, account balances, and engineered balance-delta features.
+                The analysis uses the PaySim synthetic mobile money transaction dataset. It includes information about transaction type, transaction amount, and account balances before and after each transaction. Exploratory analysis shows that fraud is concentrated mainly in TRANSFER and CASH_OUT transactions and that the dataset contains severe class imbalance.
             </div>
             """,
             unsafe_allow_html=True,
@@ -551,7 +551,7 @@ with tab1:
             """
             <div class="summary-box">
                 <b>Prediction Task</b><br>
-                This is a binary classification problem where the target variable indicates whether a transaction is fraudulent or legitimate.
+                The goal of the project is to build a binary classification model that predicts whether a transaction is fraudulent or legitimate. Because fraud detection is a rare-event problem, evaluation focuses on recall, F1 score, ROC-AUC, and Precision-Recall AUC rather than relying on accuracy alone.
             </div>
             """,
             unsafe_allow_html=True,
@@ -562,7 +562,7 @@ with tab1:
             """
             <div class="summary-box">
                 <b>Approach</b><br>
-                Multiple models were trained and compared, including Logistic Regression, Decision Tree, Random Forest, XGBoost, and a Multi-Layer Perceptron (MLP).
+                Several machine learning models were trained and compared, including Logistic Regression, Decision Tree, Random Forest, XGBoost, and a Multi-Layer Perceptron (MLP). Tree-based ensemble models are particularly well suited for this problem because they can capture nonlinear relationships between transaction features.
             </div>
             """,
             unsafe_allow_html=True,
@@ -580,7 +580,7 @@ with tab1:
             """
             <div class="summary-box">
                 <b>Why This Matters</b><br>
-                In fraud detection, missing a fraudulent event can be expensive. That is why this project focuses on recall, F1 score, and PR-AUC rather than relying on accuracy alone.
+                In real financial systems, missing fraudulent transactions can result in major financial losses. This project demonstrates how machine learning models, combined with explainability tools such as SHAP, can help identify suspicious transactions while providing interpretable insights into why the model flagged them.
             </div>
             """,
             unsafe_allow_html=True,
@@ -1058,3 +1058,4 @@ This helps identify sudden increases in recipient balances.
                     )
         else:
             st.info("Run a prediction first to generate a SHAP waterfall for your custom input.")
+
