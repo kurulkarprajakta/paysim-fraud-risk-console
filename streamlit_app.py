@@ -501,39 +501,54 @@ with tab2:
     eda4 = safe_path(MODELS_DIR, "eda_correlation_heatmap.png")
     eda5 = safe_path(MODELS_DIR, "fraud_rate_over_time.png")
 
-    c1, c2 = st.columns(2)
+    # Row 1
+    r1c1, r1c2 = st.columns(2)
 
-    with c1:
+    with r1c1:
         if file_exists(eda1):
             st.image(eda1, caption="Target distribution", use_container_width=True)
             st.caption("Fraud cases represent a very small share of the dataset, confirming severe class imbalance.")
         else:
             st.warning("Missing models/eda_class_distribution.png")
 
-        if file_exists(eda3):
-            st.image(eda3, caption="Transaction amount distribution", use_container_width=True)
-            st.caption("Transaction amounts are highly skewed, so a log-scale view makes fraud-related differences easier to interpret.")
-        else:
-            st.warning("Missing models/eda_amount_distribution.png")
-
-        if file_exists(eda5):
-            st.image(eda5, caption="Fraud rate over time", use_container_width=True)
-            st.caption("Fraud behavior varies across time steps, though these peaks should be interpreted cautiously because fraud is rare.")
-        else:
-            st.info("Optional plot missing: models/fraud_rate_over_time.png")
-
-    with c2:
+    with r1c2:
         if file_exists(eda2):
             st.image(eda2, caption="Fraud rate by transaction type", use_container_width=True)
             st.caption("Fraud is concentrated mainly in TRANSFER and CASH_OUT transactions, making transaction type a strong signal.")
         else:
             st.warning("Missing models/eda_transaction_type.png")
 
+    st.markdown("<div style='height: 0.7rem;'></div>", unsafe_allow_html=True)
+
+    # Row 2
+    r2c1, r2c2 = st.columns(2)
+
+    with r2c1:
+        if file_exists(eda3):
+            st.image(eda3, caption="Transaction amount distribution", use_container_width=True)
+            st.caption("Transaction amounts are highly skewed, so a log-scale view makes fraud-related differences easier to interpret.")
+        else:
+            st.warning("Missing models/eda_amount_distribution.png")
+
+    with r2c2:
         if file_exists(eda4):
             st.image(eda4, caption="Correlation heatmap", use_container_width=True)
             st.caption("Balance-related variables and engineered deltas show meaningful relationships that support predictive modeling.")
         else:
             st.warning("Missing models/eda_correlation_heatmap.png")
+
+    st.markdown("<div style='height: 0.7rem;'></div>", unsafe_allow_html=True)
+
+    # Row 3 - centered single chart
+    st.markdown("#### Additional Descriptive View")
+    center_left, center_col, center_right = st.columns([0.15, 0.70, 0.15])
+
+    with center_col:
+        if file_exists(eda5):
+            st.image(eda5, caption="Fraud rate over time", use_container_width=True)
+            st.caption("Fraud behavior varies across time steps, though these peaks should be interpreted cautiously because fraud is rare.")
+        else:
+            st.info("Optional plot missing: models/fraud_rate_over_time.png")
 
     st.markdown("#### Key Descriptive Findings")
     st.write(
@@ -544,7 +559,6 @@ with tab2:
         and imbalance-aware evaluation metrics in later stages of the workflow.
         """
     )
-
 
 # =========================================================
 # Tab 3 — Model Performance
@@ -871,5 +885,6 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
+
 
 
