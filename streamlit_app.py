@@ -34,8 +34,8 @@ st.markdown(
     """
     <style>
         .block-container {
-            max-width: 1240px;
-            padding-top: 4.2rem;
+            max-width: 95%;
+            padding-top: 4rem;
             padding-bottom: 2rem;
         }
 
@@ -43,7 +43,8 @@ st.markdown(
             background: linear-gradient(135deg, #0f172a 0%, #172554 45%, #2563eb 100%);
             color: white;
             border-radius: 24px;
-            padding: 1.6rem 1.8rem;
+            padding: 1.6rem 2rem;
+            width: 100%;
             margin-bottom: 1.2rem;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
         }
@@ -906,6 +907,7 @@ with tab4:
             st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
         else:
             st.info("Missing models/shap_waterfall.png")
+
 
 
 
