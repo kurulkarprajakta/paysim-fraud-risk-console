@@ -32,6 +32,7 @@ Project Structure
 ├── shap_waterfall.png
 └── best_params.json
 
+```
 The models/ folder contains the trained models, preprocessing pipeline, evaluation outputs, and visualization files used by the Streamlit application.
 
 How to Run the Application
