@@ -19,17 +19,17 @@ Project Structure
 ├── requirements.txt
 ├── README.md
 └── models/
-    ├── preprocess.pkl
-    ├── lr.pkl
-    ├── tree.pkl
-    ├── rf.pkl
-    ├── xgb.pkl
-    ├── mlp.keras
-    ├── model_comparison.csv
-    ├── shap_summary.png
-    ├── shap_bar.png
-    ├── shap_waterfall.png
-    └── best_params.json
+├── preprocess.pkl
+├── lr.pkl
+├── tree.pkl
+├── rf.pkl
+├── xgb.pkl
+├── mlp.keras
+├── model_comparison.csv
+├── shap_summary.png
+├── shap_bar.png
+├── shap_waterfall.png
+└── best_params.json
 
 The models/ folder contains the trained models, preprocessing pipeline, evaluation outputs, and visualization files used by the Streamlit application.
 
