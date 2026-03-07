@@ -95,14 +95,6 @@ st.markdown(
             box-shadow: 0 2px 10px rgba(37,99,235,0.08);
         }
 
-        .info-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 0.9rem 1rem;
-            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
-        }
-
         .risk-high {
             background: #fef2f2;
             color: #b91c1c;
@@ -144,8 +136,21 @@ st.markdown(
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 16px;
-            padding: 0.7rem 0.85rem;
+            padding: 0.55rem 0.7rem;
             box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+        }
+
+        div[data-testid="stMetric"] label {
+            font-size: 0.78rem !important;
+        }
+
+        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+            font-size: 0.95rem !important;
+            line-height: 1.1 !important;
+        }
+
+        div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+            font-size: 0.75rem !important;
         }
 
         .tiny-note {
@@ -377,7 +382,7 @@ if not TF_AVAILABLE:
 # Header
 # =========================================================
 st.markdown(
-    f"""
+    """
     <div class="hero">
         <div class="hero-title">PaySim Fraud Detection Workflow</div>
         <div class="hero-subtitle">
@@ -558,10 +563,16 @@ with tab3:
     )
 
     display_df = df_metrics.copy()
-    for col in metric_cols:
-        display_df[col] = display_df[col].round(3)
+    if "Model" in display_df.columns:
+        display_df = display_df[display_df["Model"].notna()]
+        display_df = display_df[display_df["Model"].astype(str).str.strip() != ""]
+    display_df = display_df.dropna(how="all")
 
-    st.dataframe(display_df, use_container_width=True)
+    for col in metric_cols:
+        if col in display_df.columns:
+            display_df[col] = pd.to_numeric(display_df[col], errors="coerce").round(3)
+
+    st.dataframe(display_df.reset_index(drop=True), use_container_width=True)
 
     st.markdown("#### Metric Comparison")
     chart_cols = [c for c in ["F1", "ROC_AUC", "PR_AUC"] if c in df_metrics.columns]
@@ -665,6 +676,18 @@ with tab4:
     st.markdown(
         '<div class="section-subtitle">Use the trained models to score a custom transaction and review SHAP-based explanation artifacts.</div>',
         unsafe_allow_html=True
+    )
+
+    st.markdown(
+        """
+        <div class="summary-box">
+            <b>How to use this section</b><br>
+            Select a model, choose a fraud threshold, and either use a quick scenario or enter custom transaction values manually.
+            Then click <b>Run Prediction</b> to see the fraud probability, model decision, and recommended action.
+            The SHAP plots below explain which features matter most overall and how they influence an example prediction.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     control_col, result_col = st.columns(2)
@@ -777,8 +800,12 @@ with tab4:
             with m3:
                 st.metric("Model Used", last_model)
 
+            st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
             st.progress(min(max(prob, 0.0), 1.0))
+            st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
             st.markdown(risk_badge(prob, last_threshold), unsafe_allow_html=True)
+
+            st.markdown("<div style='height: 0.8rem;'></div>", unsafe_allow_html=True)
 
             st.markdown(
                 f"""
@@ -789,10 +816,14 @@ with tab4:
                 unsafe_allow_html=True,
             )
 
+            st.markdown("<div style='height: 0.55rem;'></div>", unsafe_allow_html=True)
+
             with st.expander("Input row used for prediction", expanded=False):
                 st.dataframe(X_df, use_container_width=True)
 
-            st.caption("A transaction is classified as fraud when its predicted probability exceeds the selected threshold.")
+            st.caption(
+                "A transaction is classified as fraud when its predicted probability exceeds the selected threshold."
+            )
         else:
             st.info("Enter transaction values and run a prediction to view the model output.")
 
@@ -801,9 +832,9 @@ with tab4:
 
     st.write(
         """
-        SHAP plots are used to explain which variables contribute most to model predictions.
-        The summary plot shows overall feature impact across many observations, the bar plot ranks
-        global importance, and the waterfall plot explains one example prediction from the final tree-based model.
+        The plots below help interpret the trained XGBoost model.
+        The summary plot shows how features influence predictions across many transactions,
+        the bar plot ranks the most important drivers globally, and the waterfall plot explains one example prediction step by step.
         """
     )
 
@@ -826,8 +857,15 @@ with tab4:
             st.warning("Missing models/shap_bar.png")
 
     st.markdown("#### Waterfall Example")
-    if file_exists(shap_waterfall):
-        st.image(shap_waterfall, caption="SHAP Waterfall Plot for an Example Prediction", use_container_width=True)
-        st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
-    else:
-        st.info("Missing models/shap_waterfall.png")
+    wf_left, wf_center, wf_right = st.columns([0.12, 0.76, 0.12])
+
+    with wf_center:
+        if file_exists(shap_waterfall):
+            st.image(
+                shap_waterfall,
+                caption="SHAP Waterfall Plot for an Example Prediction",
+                use_container_width=True
+            )
+            st.caption("This waterfall plot explains one representative prediction from the trained XGBoost model.")
+        else:
+            st.info("Missing models/shap_waterfall.png")
