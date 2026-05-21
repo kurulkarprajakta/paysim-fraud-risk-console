@@ -199,7 +199,7 @@ def generate_synthetic_transaction(force_fraud=False):
                 "oldbalanceOrg":round(oldbal,2),"newbalanceOrig":round(newbal_orig,2),
                 "oldbalanceDest":round(oldbal_dest,2),"newbalanceDest":round(oldbal_dest+amount,2),"is_fraud_gt":0}
 
-# ── Model performance (from retrain) ─────────
+# ── Model performance ─────────────────────────
 MODEL_PERF = pd.DataFrame([
     {"Model":"XGBoost",         "Accuracy":0.9998,"Precision":0.9913,"Recall":0.8507,"F1":0.9157,"ROC_AUC":0.9973,"PR_AUC":0.9264},
     {"Model":"Random Forest",   "Accuracy":0.9997,"Precision":0.9898,"Recall":0.7276,"F1":0.8387,"ROC_AUC":0.9848,"PR_AUC":0.9170},
@@ -208,7 +208,7 @@ MODEL_PERF = pd.DataFrame([
     {"Model":"Logistic Reg.",   "Accuracy":0.9402,"Precision":0.0179,"Recall":0.9739,"F1":0.0351,"ROC_AUC":0.9845,"PR_AUC":0.5846},
 ])
 
-# ── Session state ─────────────────────────────
+# ── Predefined samples ────────────────────────
 FRAUD_SAMPLE = {"step":1,"type":"TRANSFER","amount":181480.25,
                 "oldbalanceOrg":181480.25,"newbalanceOrig":0.0,
                 "oldbalanceDest":0.0,"newbalanceDest":181480.25}
@@ -216,12 +216,13 @@ LEGIT_SAMPLE = {"step":10,"type":"PAYMENT","amount":1200.0,
                 "oldbalanceOrg":45000.0,"newbalanceOrig":43800.0,
                 "oldbalanceDest":5000.0,"newbalanceDest":6200.0}
 
-defaults = FRAUD_SAMPLE  # start with fraud sample loaded
-
-for k,v in defaults.items():
-    if f"inp_{k}" not in st.session_state:
-        st.session_state[f"inp_{k}"] = v
-
+# ── Session state init ────────────────────────
+# form_version is the key trick: incrementing it changes all widget
+# keys, forcing Streamlit to re-render with fresh default values.
+if "form_version" not in st.session_state:
+    st.session_state.form_version = 0
+if "current_sample" not in st.session_state:
+    st.session_state.current_sample = FRAUD_SAMPLE.copy()
 if "feed" not in st.session_state:
     st.session_state.feed = []
 if "feed_stats" not in st.session_state:
@@ -266,7 +267,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ══════════════════════════════════════════════
-# TAB 1
+# TAB 1 — Score Transaction
 # ══════════════════════════════════════════════
 with tab1:
     col_left, col_right = st.columns([1.1, 1])
@@ -277,46 +278,58 @@ with tab1:
         qc1, qc2, qc3 = st.columns(3)
         with qc1:
             if st.button("🚨 Fraud Sample", use_container_width=True):
-                for k,v in FRAUD_SAMPLE.items():
-                    st.session_state[f"inp_{k}"] = v
+                st.session_state.current_sample = FRAUD_SAMPLE.copy()
+                st.session_state.form_version += 1
                 st.rerun()
         with qc2:
             if st.button("✅ Legit Sample", use_container_width=True):
-                for k,v in LEGIT_SAMPLE.items():
-                    st.session_state[f"inp_{k}"] = v
+                st.session_state.current_sample = LEGIT_SAMPLE.copy()
+                st.session_state.form_version += 1
                 st.rerun()
         with qc3:
             if st.button("🎲 Random", use_container_width=True):
                 tx = generate_synthetic_transaction()
-                for k in ["step","type","amount","oldbalanceOrg","newbalanceOrig","oldbalanceDest","newbalanceDest"]:
-                    st.session_state[f"inp_{k}"] = tx[k]
+                st.session_state.current_sample = {
+                    k: tx[k] for k in ["step","type","amount","oldbalanceOrg",
+                                        "newbalanceOrig","oldbalanceDest","newbalanceDest"]
+                }
+                st.session_state.form_version += 1
                 st.rerun()
 
-        # Form reads from session state
+        # version suffix forces fresh keys on every sample change
+        v = st.session_state.form_version
+        s = st.session_state.current_sample
         type_options = ["TRANSFER","CASH_OUT","PAYMENT","CASH_IN","DEBIT"]
 
         c1, c2 = st.columns(2)
         with c1:
             step       = st.number_input("Step (time step)", min_value=1,
-                                          value=int(st.session_state["inp_step"]), step=1, key="w_step")
+                                          value=int(s["step"]), step=1,
+                                          key=f"step_{v}")
             tx_type    = st.selectbox("Transaction type", type_options,
-                                       index=type_options.index(st.session_state["inp_type"]), key="w_type")
+                                       index=type_options.index(s["type"]),
+                                       key=f"type_{v}")
             amount     = st.number_input("Amount ($)", min_value=0.0,
-                                          value=float(st.session_state["inp_amount"]),
-                                          step=100.0, format="%.2f", key="w_amount")
+                                          value=float(s["amount"]),
+                                          step=100.0, format="%.2f",
+                                          key=f"amount_{v}")
         with c2:
             oldbalanceOrg  = st.number_input("Origin balance (before)", min_value=0.0,
-                                              value=float(st.session_state["inp_oldbalanceOrg"]),
-                                              step=100.0, format="%.2f", key="w_oldorg")
+                                              value=float(s["oldbalanceOrg"]),
+                                              step=100.0, format="%.2f",
+                                              key=f"oldorg_{v}")
             newbalanceOrig = st.number_input("Origin balance (after)", min_value=0.0,
-                                              value=float(st.session_state["inp_newbalanceOrig"]),
-                                              step=100.0, format="%.2f", key="w_neworig")
+                                              value=float(s["newbalanceOrig"]),
+                                              step=100.0, format="%.2f",
+                                              key=f"neworig_{v}")
             oldbalanceDest = st.number_input("Destination balance (before)", min_value=0.0,
-                                              value=float(st.session_state["inp_oldbalanceDest"]),
-                                              step=100.0, format="%.2f", key="w_olddest")
+                                              value=float(s["oldbalanceDest"]),
+                                              step=100.0, format="%.2f",
+                                              key=f"olddest_{v}")
             newbalanceDest = st.number_input("Destination balance (after)", min_value=0.0,
-                                              value=float(st.session_state["inp_newbalanceDest"]),
-                                              step=100.0, format="%.2f", key="w_newdest")
+                                              value=float(s["newbalanceDest"]),
+                                              step=100.0, format="%.2f",
+                                              key=f"newdest_{v}")
 
         score_btn = st.button("⚡ Score Transaction", use_container_width=True, type="primary")
 
@@ -338,14 +351,12 @@ with tab1:
             triggered = evaluate_rules(row_dict, ml_score) if rules_enabled else []
             verdict, action = final_decision(ml_score, triggered, threshold)
 
-            # Update stats
             st.session_state.feed_stats["total"] += 1
             if verdict in ["FRAUD","SUSPICIOUS"]:
                 st.session_state.feed_stats["fraud"] += 1
             if action == "BLOCK":
                 st.session_state.feed_stats["blocked_value"] += amount
 
-            # Decision card
             if verdict == "FRAUD":
                 st.markdown(f"""
                 <div class="decision-fraud">
@@ -364,8 +375,6 @@ with tab1:
                 </div>""", unsafe_allow_html=True)
 
             st.divider()
-
-            # All model scores
             st.markdown("**Ensemble scores (all models)**")
             all_scores = score_all_models(X_df)
             for mname, mscore in all_scores.items():
@@ -380,7 +389,6 @@ with tab1:
                   <span style="font-size:12px;font-family:monospace;color:{color};min-width:40px;">{mscore:.1%}</span>
                 </div>""", unsafe_allow_html=True)
 
-            # Triggered rules
             if triggered:
                 st.divider()
                 st.markdown("**Rules triggered**")
@@ -398,13 +406,13 @@ with tab1:
                 st.dataframe(X_df, use_container_width=True)
 
         else:
-            st.info("👈 Click **Fraud Sample**, **Legit Sample**, or **Random** above — then hit **Score Transaction**.")
+            st.info("👈 Click **Fraud Sample**, **Legit Sample**, or **Random** — then hit **Score Transaction**.")
             st.markdown("""
 **What this shows:**
-- Your trained XGBoost / RF / LR / DT models run live inference
-- 6 fraud detection rules evaluate the transaction
+- Live inference from your trained XGBoost / RF / LR / DT models
+- 6 fraud detection rules evaluated on every transaction
 - Final decision: BLOCK / STEP_UP_AUTH / REVIEW / PASS
-- All model scores shown side by side
+- All model scores side by side
             """)
 
 # ══════════════════════════════════════════════
@@ -551,7 +559,7 @@ with tab4:
     with ic1:
         st.info("🔑 **orig_balance_delta** is the #1 driver — when a sender's balance is fully drained, the model weights this heavily toward fraud.")
     with ic2:
-        st.info("💡 **Transaction type** matters: TRANSFER and CASH_OUT dominate fraud cases. PAYMENT and DEBIT are near-zero fraud risk.")
+        st.info("💡 **Transaction type** matters: TRANSFER and CASH_OUT dominate fraud. PAYMENT and DEBIT are near-zero risk.")
     with ic3:
         st.info("⚡ **dest_balance_delta** reveals mule accounts — destination going from zero to large values is a strong fraud signal.")
 
